@@ -1,0 +1,16 @@
+[package]
+name = "speexdsp-sys"
+version = "0.1.0"
+authors = ["Luca Barbato <lu_zero@gentoo.org>"]
+license = "MIT"
+
+[features]
+build = []
+
+[build-dependencies]
+autotools = "0.1"
+metadeps = "1.1"
+bindgen = "0.33"
+
+[package.metadata.pkg-config]
+speexdsp = "1.2"

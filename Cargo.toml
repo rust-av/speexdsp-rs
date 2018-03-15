@@ -1,0 +1,14 @@
+[package]
+name = "speexdsp"
+version = "0.1.0"
+authors = ["Luca Barbato <lu_zero@gentoo.org>"]
+description = "Bindings for the speexdsp library"
+
+[features]
+build = ["speexdsp-sys/build"]
+
+[dependencies]
+speexdsp-sys = { path = "speexdsp-sys" }
+
+[workspace]
+members = ["speexdsp-sys"]
