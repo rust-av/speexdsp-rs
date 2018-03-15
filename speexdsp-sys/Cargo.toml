@@ -3,6 +3,9 @@ name = "speexdsp-sys"
 version = "0.1.0"
 authors = ["Luca Barbato <lu_zero@gentoo.org>"]
 license = "MIT"
+description = "low level bindings for the speexdsp library"
+repository = "https://github.com/rust-av/speexdsp-rs"
+readme = "../README.md"
 
 [features]
 build = []
