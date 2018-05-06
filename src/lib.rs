@@ -1,6 +1,6 @@
 extern crate speexdsp_sys;
 
-pub use speexdsp_sys::*;
+pub mod resampler;
 
 #[cfg(test)]
 mod tests {
