@@ -9,9 +9,10 @@ It is a simple [binding][1] and safe abstraction over [speexdsp][2].
 The bindings are generated using the headers and libraries that ought to be present in the system.
 
 ## TODO
-- [ ] Simple bindings
+- [ ] Source build speexdsp
+- [x] Simple bindings
 - [ ] Safe abstraction
-- [ ] Examples
+- [x] Examples
 
 [1]: https://github.com/servo/rust-bindgen
 [2]: https://github.com/xiph/speexdsp
