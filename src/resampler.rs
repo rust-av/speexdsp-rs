@@ -100,6 +100,22 @@ impl State {
             Ok((in_len as usize, out_len as usize))
         }
     }
+
+    pub fn skip_zeros(&mut self) {
+        unsafe { speex_resampler_skip_zeros(self.st) };
+    }
+
+    pub fn reset(&mut self) {
+        unsafe { speex_resampler_reset_mem(self.st) };
+    }
+
+    pub fn get_input_latency(&self) -> usize {
+        unsafe { speex_resampler_get_input_latency(self.st) as usize }
+    }
+
+    pub fn get_output_latency(&self) -> usize {
+        unsafe { speex_resampler_get_output_latency(self.st) as usize }
+    }
 }
 
 impl Drop for State {
