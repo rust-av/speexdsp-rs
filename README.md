@@ -8,6 +8,9 @@ It is a simple [binding][1] and safe abstraction over [speexdsp][2].
 
 The bindings are generated using the headers and libraries that ought to be present in the system.
 
+- Make sure you have `clang` and `libclang` installed.
+- Make sure the `speexdsp` C headers and pkg-config files are installed.
+
 ## TODO
 - [ ] Source build speexdsp
 - [x] Simple bindings
