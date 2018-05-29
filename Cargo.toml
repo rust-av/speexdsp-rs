@@ -16,5 +16,9 @@ build = ["speexdsp-sys/build"]
 [dependencies]
 speexdsp-sys = { version = "0.1.1", path = "speexdsp-sys" }
 
+[dev-dependencies]
+assert_cmd = "0.1.0"
+predicates = "0.4"
+
 [workspace]
 members = ["speexdsp-sys"]
