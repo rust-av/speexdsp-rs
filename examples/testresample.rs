@@ -20,6 +20,9 @@ fn main() {
     st.set_rate(RATE, rate);
     st.skip_zeros();
 
+    st.set_quality(10).unwrap();
+    eprintln!("Quality: {}", st.get_quality());
+
     loop {
         let in_len = avail as usize;
         let out_len = (in_len * rate + RATE - 1) / RATE;
@@ -29,7 +32,7 @@ fn main() {
 
         let (in_len, out_len) = st.process_float(0, &fin[off .. off + in_len], &mut fout[..out_len]).unwrap();
 
-        eprintln!("{} {} {} {} -> {} {}", rate, off, prev_in_len, prev_out_len, in_len, out_len);
+        println!("{} {} {} {} -> {} {}", rate, off, prev_in_len, prev_out_len, in_len, out_len);
 
         off += in_len as usize;
         avail += INBLOCK as isize - in_len as isize;

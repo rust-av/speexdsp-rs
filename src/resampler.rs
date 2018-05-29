@@ -116,6 +116,22 @@ impl State {
     pub fn get_output_latency(&self) -> usize {
         unsafe { speex_resampler_get_output_latency(self.st) as usize }
     }
+
+    pub fn set_quality(&self, quality: usize) -> Result<(), Error> {
+        let ret = unsafe { speex_resampler_set_quality(self.st, quality as i32) };
+        if ret != 0 {
+            Err(Error::from_i32(ret))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn get_quality(&self) -> usize {
+        let mut c_get = 0;
+        unsafe { speex_resampler_get_quality(self.st, &mut c_get);}
+        c_get as usize
+    }
+
 }
 
 impl Drop for State {
