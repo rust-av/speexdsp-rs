@@ -6,6 +6,10 @@ It is a simple [binding][1] and safe abstraction over [speexdsp][2].
 
 ## Building
 
+ Ensure you have `clang` installed.
+
+ Install `speedxsdx` development library.
+
 The bindings are generated using the headers and libraries that ought to be present in the system.
 
 ## TODO
