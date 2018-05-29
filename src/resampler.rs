@@ -131,7 +131,6 @@ impl State {
         unsafe { speex_resampler_get_quality(self.st, &mut c_get) };
         c_get as usize
     }
-
 }
 
 impl Drop for State {
