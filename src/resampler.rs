@@ -21,6 +21,7 @@ impl fmt::Display for Error {
 }
 
 impl Error {
+    #[allow(non_snake_case, unreachable_patterns, unused_variables)]
     fn from_i32(v: i32) -> Self {
         match v as u32 {
             RESAMPLER_ERR_ALLOC_FAILED => Error::AllocFailed,
@@ -131,7 +132,6 @@ impl State {
         unsafe { speex_resampler_get_quality(self.st, &mut c_get) };
         c_get as usize
     }
-
 }
 
 impl Drop for State {
