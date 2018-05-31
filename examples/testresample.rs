@@ -22,6 +22,9 @@ fn main() {
     st.set_rate(RATE, rate);
     st.skip_zeros();
 
+    st.set_quality(10).unwrap();
+    eprintln!("Quality: {}", st.get_quality());
+
     loop {
         let in_len = avail as usize;
         let out_len = (in_len * rate + RATE - 1) / RATE;
