@@ -12,9 +12,11 @@ readme = "README.md"
 
 [features]
 build = ["speexdsp-sys/build"]
+sys = ["speexdsp-sys"]
 
 [dependencies]
-speexdsp-sys = { version = "0.1.1", path = "speexdsp-sys" }
+speexdsp-sys = { version = "0.1.1", path = "speexdsp-sys", optional = true }
+libc = "0.2.42"
 
 [workspace]
 members = ["speexdsp-sys"]

@@ -1,4 +1,7 @@
+#[cfg(feature="sys")]
 use speexdsp_sys::resampler::*;
+#[cfg(not(feature="sys"))]
+use speex_resample::*;
 
 use std::ffi::CStr;
 use std::fmt;
