@@ -2,34 +2,18 @@ extern crate autotools;
 extern crate bindgen;
 extern crate metadeps;
 
-use std::env;
-use std::fs::OpenOptions;
+use std::path::PathBuf;
 use std::io::Write;
+use std::env;
+use std::fs::File;
 
-fn format_write(builder: bindgen::Builder, output: &str) {
-    let s = builder
+fn format_write(builder: bindgen::Builder) -> String {
+    builder
         .generate()
         .unwrap()
         .to_string()
         .replace("/**", "/*")
-        .replace("/*!", "/*");
-
-    let mut file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(output)
-        .unwrap();
-
-    let _ = file.write(s.as_bytes());
-}
-
-fn common_builder() -> bindgen::Builder {
-    bindgen::builder()
-        .raw_line("#![allow(dead_code)]")
-        .raw_line("#![allow(non_camel_case_types)]")
-        .raw_line("#![allow(non_snake_case)]")
-        .raw_line("#![allow(non_upper_case_globals)]")
+        .replace("/*!", "/*")
 }
 
 fn main() {
@@ -44,14 +28,22 @@ fn main() {
 
     let headers = libs.get("speexdsp").unwrap().include_paths.clone();
 
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+
     for e in ["echo", "jitter", "preprocess", "resampler"].iter() {
-        let mut builder = common_builder().header(format!("data/{}.h", e));
+        let mut builder = bindgen::builder().header(format!("data/{}.h", e));
 
         for header in headers.iter() {
             builder = builder.clang_arg("-I").clang_arg(header.to_str().unwrap());
         }
 
         // Manually fix the comment so rustdoc won't try to pick them
-        format_write(builder, &format!("src/{}.rs", e));
+        let s = format_write(builder);
+
+        let lib = format!("{}.rs", e);
+
+        let mut file = File::create(out_path.join(&lib)).unwrap();
+
+        let _ = file.write(s.as_bytes());
     }
 }

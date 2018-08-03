@@ -1,6 +1,6 @@
 [package]
 name = "speexdsp-sys"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Luca Barbato <lu_zero@gentoo.org>"]
 license = "MIT"
 description = "low level bindings for the speexdsp library"
@@ -16,7 +16,7 @@ build = []
 [build-dependencies]
 autotools = "0.1"
 metadeps = "1.1"
-bindgen = "0.33"
+bindgen = "0.37"
 
 [package.metadata.pkg-config]
 speexdsp = "1.2"
