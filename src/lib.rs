@@ -9,11 +9,3 @@ extern crate libc;
 pub mod resampler;
 #[cfg(not(feature="sys"))]
 mod speex_resample;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}

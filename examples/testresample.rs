@@ -12,8 +12,8 @@ fn main() {
     let mut off = 0;
     let mut avail = INBLOCK as isize;
 
-    let fin : Vec<f32> = (0 .. INBLOCK * 2).map(|i| ((i as f32) / PERIOD * 2.0 * PI).sin() * 0.9).collect();
-    let mut fout = vec![0f32; INBLOCK * 4];
+    let fin : Vec<f32> = (0 .. INBLOCK * 4).map(|i| ((i as f32) / PERIOD * 2.0 * PI).sin() * 0.9).collect();
+    let mut fout = vec![0f32; INBLOCK * 8];
 
     let mut st = State::new(1, RATE, RATE, 4).unwrap();
 
@@ -22,6 +22,8 @@ fn main() {
 
     st.set_quality(10).unwrap();
     eprintln!("Quality: {}", st.get_quality());
+
+    let mut data = Vec::new();
 
     loop {
         let in_len = avail as usize;
@@ -41,13 +43,17 @@ fn main() {
             off -= INBLOCK;
         }
 
-        println!("{:#?}", &fout[..out_len as usize]);
+        // println!("{:#?}", &fout[..out_len as usize]);
 
-        rate += 100;
+        data.push(fout[..out_len as usize].to_vec());
+
+        rate += 5000;
         if rate > 128000 {
             break;
         }
 
         st.set_rate(RATE, rate);
     }
+
+    println!("{:#?}", data);
 }
