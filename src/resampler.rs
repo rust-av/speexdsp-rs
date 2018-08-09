@@ -17,9 +17,15 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let v = unsafe { CStr::from_ptr(speex_resampler_strerror(*self as i32)) };
+        let v = match self {
+            Error::AllocFailed => "Memory allocation failed.",
+            Error::BadState => "Bad resampler state.",
+            Error::InvalidArg => "Invalid argument.",
+            Error::PtrOverlap => "Input and output buffers overlap.",
+            Error::Overflow => "Muldiv overflow."
+        };
 
-        write!(f, "{}", v.to_string_lossy())
+        write!(f, "{}", v)
     }
 }
 
