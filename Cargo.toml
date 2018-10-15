@@ -11,7 +11,6 @@ license = "MIT"
 readme = "README.md"
 
 [features]
-build = ["speexdsp-sys/build"]
 sys = ["speexdsp-sys"]
 
 [dependencies]
