@@ -1,4 +1,3 @@
-#![feature(extern_types)]
 #![feature ( const_slice_as_ptr , extern_types , libc )]
 #![feature(extern_prelude)]
 
