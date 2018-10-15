@@ -6,7 +6,7 @@ rust:
 sudo: false
 install:
 - git clone https://github.com/xiph/speexdsp.git
-- cd speexdsp && make && make install &&
+- cd speexdsp && ./configure --prefix=$HOME/installed_speexdsp && make && make install &&
   cd ..
 - export PKG_CONFIG_PATH=$HOME/installed_speexdsp/lib/pkgconfig:$PKG_CONFIG_PATH
 - export LD_LIBRARY_PATH=$HOME/installed_speexdsp/lib:$LD_LIBRARY_PATH
