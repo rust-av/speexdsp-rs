@@ -6,5 +6,4 @@ extern crate speexdsp_sys;
 extern crate libc;
 
 pub mod resampler;
-#[cfg(not(feature="sys"))]
 mod speex_resample;
