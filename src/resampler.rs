@@ -151,7 +151,7 @@ mod sys {
 pub use self::sys::{Error, State};
 
 
-mod native {
+pub mod native {
     use speex_resample::*;
     use std::fmt;
 
