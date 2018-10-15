@@ -16,7 +16,7 @@ build = []
 [build-dependencies]
 autotools = "0.1"
 metadeps = "1.1"
-bindgen = "0.37"
+bindgen = "0.42"
 
 [package.metadata.pkg-config]
 speexdsp = "1.2"
