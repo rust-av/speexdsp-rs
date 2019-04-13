@@ -1117,7 +1117,7 @@ static mut quality_map: [QualityMapping; 11] =
 static mut _KAISER12: FuncDef =
     unsafe { FuncDef{table: kaiser12_table.as_ptr(), oversample: 64i32,} };
 static mut kaiser12_table: [libc::c_double; 68] =
-    unsafe {
+    {
         [0.99859849f64, 1.0f64, 0.99859849f64, 0.99440475f64, 0.98745105f64,
          0.97779076f64, 0.9654977f64, 0.95066529f64, 0.93340547f64,
          0.91384741f64, 0.89213598f64, 0.86843014f64, 0.84290116f64,
@@ -1139,7 +1139,7 @@ static mut kaiser12_table: [libc::c_double; 68] =
 static mut _KAISER10: FuncDef =
     unsafe { FuncDef{table: kaiser10_table.as_ptr(), oversample: 32i32,} };
 static mut kaiser10_table: [libc::c_double; 36] =
-    unsafe {
+    {
         [0.99537781f64, 1.0f64, 0.99537781f64, 0.98162644f64, 0.95908712f64,
          0.92831446f64, 0.89005583f64, 0.84522401f64, 0.79486424f64,
          0.74011713f64, 0.68217934f64, 0.62226347f64, 0.56155915f64,
@@ -1153,7 +1153,7 @@ static mut kaiser10_table: [libc::c_double; 36] =
 static mut _KAISER8: FuncDef =
     unsafe { FuncDef{table: kaiser8_table.as_ptr(), oversample: 32i32,} };
 static mut kaiser8_table: [libc::c_double; 36] =
-    unsafe {
+    {
         [0.99635258f64, 1.0f64, 0.99635258f64, 0.98548012f64, 0.96759014f64,
          0.943022f64, 0.91223751f64, 0.87580811f64, 0.83439927f64,
          0.78875245f64, 0.73966538f64, 0.68797126f64, 0.6345175f64,
@@ -1167,7 +1167,7 @@ static mut kaiser8_table: [libc::c_double; 36] =
 static mut _KAISER6: FuncDef =
     unsafe { FuncDef{table: kaiser6_table.as_ptr(), oversample: 32i32,} };
 static mut kaiser6_table: [libc::c_double; 36] =
-    unsafe {
+    {
         [0.99733006f64, 1.0f64, 0.99733006f64, 0.98935595f64, 0.97618418f64,
          0.95799003f64, 0.93501423f64, 0.90755855f64, 0.87598009f64,
          0.84068475f64, 0.80211977f64, 0.76076565f64, 0.71712752f64,
