@@ -1,4 +1,4 @@
-#![feature ( const_slice_as_ptr , extern_types , libc )]
+#![feature ( extern_types , libc )]
 #![feature(extern_prelude)]
 
 #[cfg(feature="sys")]
