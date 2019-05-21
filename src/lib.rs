@@ -1,5 +1,3 @@
-#![feature ( extern_types , libc )]
-
 #[cfg(feature="sys")]
 extern crate speexdsp_sys;
 extern crate libc;

@@ -1,67 +1,8 @@
 #![allow
 ( dead_code , mutable_transmutes , non_camel_case_types , non_snake_case ,
 non_upper_case_globals , unused_mut )]
-extern "C" {
-    pub type _IO_FILE_plus;
-    #[no_mangle]
-    fn free(__ptr: *mut libc::c_void) -> ();
-    #[no_mangle]
-    fn realloc(_: *mut libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
-    #[no_mangle]
-    fn fabs(_: libc::c_double) -> libc::c_double;
-    #[no_mangle]
-    fn floor(_: libc::c_double) -> libc::c_double;
-    #[no_mangle]
-    fn sin(_: libc::c_double) -> libc::c_double;
-    #[no_mangle]
-    fn exit(_: libc::c_int) -> !;
-    #[no_mangle]
-    static mut stderr: *mut _IO_FILE_0;
-    #[no_mangle]
-    fn fprintf(_: *mut FILE, _: *const libc::c_char, ...) -> libc::c_int;
-    #[no_mangle]
-    fn calloc(_: libc::c_ulong, _: libc::c_ulong) -> *mut libc::c_void;
-    #[no_mangle]
-    static mut _IO_2_1_stdin_: _IO_FILE_plus;
-    #[no_mangle]
-    static mut _IO_2_1_stdout_: _IO_FILE_plus;
-    #[no_mangle]
-    static mut _IO_2_1_stderr_: _IO_FILE_plus;
-    #[no_mangle]
-    fn __uflow(_: *mut _IO_FILE) -> libc::c_int;
-    #[no_mangle]
-    fn __overflow(_: *mut _IO_FILE, _: libc::c_int) -> libc::c_int;
-    #[no_mangle]
-    fn _IO_getc(__fp: *mut _IO_FILE) -> libc::c_int;
-    #[no_mangle]
-    fn _IO_putc(__c: libc::c_int, __fp: *mut _IO_FILE) -> libc::c_int;
-    #[no_mangle]
-    static mut stdin: *mut _IO_FILE_0;
-    #[no_mangle]
-    static mut stdout: *mut _IO_FILE_0;
-    #[no_mangle]
-    fn printf(_: *const libc::c_char, ...) -> libc::c_int;
-    #[no_mangle]
-    fn vfprintf(_: *mut FILE, _: *const libc::c_char, _: *mut __va_list_tag)
-     -> libc::c_int;
-    #[no_mangle]
-    static mut sys_nerr: libc::c_int;
-    #[no_mangle]
-    static sys_errlist: [*const libc::c_char; 0];
-    #[no_mangle]
-    fn strtod(__nptr: *const libc::c_char, __endptr: *mut *mut libc::c_char)
-     -> libc::c_double;
-    #[no_mangle]
-    fn strtol(__nptr: *const libc::c_char, __endptr: *mut *mut libc::c_char,
-              __base: libc::c_int) -> libc::c_long;
-    #[no_mangle]
-    fn strtoll(__nptr: *const libc::c_char, __endptr: *mut *mut libc::c_char,
-               __base: libc::c_int) -> libc::c_longlong;
-    #[no_mangle]
-    static mut signgam: libc::c_int;
-    #[no_mangle]
-    static mut _LIB_VERSION: _LIB_VERSION_TYPE;
-}
+use libc::*;
+
 pub const RESAMPLER_ERR_INVALID_ARG: unnamed = 3;
 pub type __uint64_t = libc::c_ulong;
 pub const RESAMPLER_ERR_OVERFLOW: unnamed = 5;
@@ -781,7 +722,7 @@ unsafe extern "C" fn resampler_basic_zero(mut st: *mut SpeexResamplerState,
 unsafe extern "C" fn speex_realloc(mut ptr: *mut libc::c_void,
                                    mut size: libc::c_int)
  -> *mut libc::c_void {
-    return realloc(ptr, size as libc::c_ulong);
+    return realloc(ptr, size as usize);
 }
 unsafe extern "C" fn resampler_basic_interpolate_single(mut st:
                                                             *mut SpeexResamplerState,
@@ -1162,16 +1103,16 @@ unsafe extern "C" fn sinc(mut cutoff: libc::c_float, mut x: libc::c_float,
                           mut N: libc::c_int, mut window_func: *const FuncDef)
  -> spx_word16_t {
     let mut xx: libc::c_float = x * cutoff;
-    if fabs(x as libc::c_double) < 0.000001f64 {
+    if (x as libc::c_double).abs() < 0.000001f64 {
         return cutoff
-    } else if fabs(x as libc::c_double) > 0.5f64 * N as libc::c_double {
+    } else if (x as libc::c_double).abs() > 0.5f64 * N as libc::c_double {
         return 0i32 as spx_word16_t
     } else {
         return (cutoff as libc::c_double *
-                    sin(3.141592653589793f64 * xx as libc::c_double) /
+                    (3.141592653589793f64 * xx as libc::c_double).sin() /
                     (3.141592653589793f64 * xx as libc::c_double) *
-                    compute_func(fabs(2.0f64 * x as libc::c_double /
-                                          N as libc::c_double) as
+                    compute_func((2.0f64 * x as libc::c_double /
+                                          N as libc::c_double).abs() as
                                      libc::c_float, window_func)) as
                    spx_word16_t
     };
@@ -1181,7 +1122,7 @@ unsafe extern "C" fn compute_func(mut x: libc::c_float,
  -> libc::c_double {
     let mut interp: [libc::c_double; 4] = [0.; 4];
     let y: libc::c_float = x * (*func).oversample as libc::c_float;
-    let ind: libc::c_int = floor(y as libc::c_double) as libc::c_int;
+    let ind: libc::c_int = (y as libc::c_double).floor() as libc::c_int;
     let frac: libc::c_float = y - ind as libc::c_float;
     interp[3usize] =
         -0.1666666667f64 * frac as libc::c_double +
@@ -1458,7 +1399,7 @@ pub unsafe extern "C" fn speex_resampler_set_quality(mut st:
 /* * Speex wrapper for calloc. To do your own dynamic allocation, all you need to do is replace this function, speex_realloc and speex_free
     NOTE: speex_alloc needs to CLEAR THE MEMORY */
 unsafe extern "C" fn speex_alloc(mut size: libc::c_int) -> *mut libc::c_void {
-    return calloc(size as libc::c_ulong, 1i32 as libc::c_ulong);
+    return calloc(size as usize, 1);
 }
 /* * Resample a float array. The input and output buffers must *not* overlap.
  * @param st Resampler state
@@ -1729,9 +1670,9 @@ pub unsafe extern "C" fn speex_resampler_process_int(mut st:
                                32766.5f32 {
                      32767i32
                  } else {
-                     floor(0.5f64 +
+                     (0.5f64 +
                                *ystack.as_mut_ptr().offset(j as isize) as
-                                   libc::c_double) as spx_int16_t as
+                                   libc::c_double).floor() as spx_int16_t as
                          libc::c_int
                  }) as spx_int16_t;
             j += 1
