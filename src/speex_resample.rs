@@ -3,6 +3,7 @@
 non_upper_case_globals , unused_mut )]
 use libc::*;
 
+pub type unnamed = libc::c_uint;
 pub const RESAMPLER_ERR_INVALID_ARG: unnamed = 3;
 pub type __uint64_t = libc::c_ulong;
 pub const RESAMPLER_ERR_OVERFLOW: unnamed = 5;
@@ -17,11 +18,6 @@ pub struct __va_list_tag {
     pub reg_save_area: *mut libc::c_void,
 }
 pub const RESAMPLER_ERR_PTR_OVERLAP: unnamed = 4;
-pub type __off_t = libc::c_long;
-pub const _SVID_: _LIB_VERSION_TYPE = 0;
-pub type __uint16_t = libc::c_ushort;
-pub type __off64_t = libc::c_long;
-pub const _IEEE_: _LIB_VERSION_TYPE = -1;
 pub type SpeexResamplerState = SpeexResamplerState_;
 #[derive ( Copy , Clone )]
 #[repr ( C )]
@@ -51,16 +47,7 @@ pub struct SpeexResamplerState_ {
     pub in_stride: libc::c_int,
     pub out_stride: libc::c_int,
 }
-pub type size_t = libc::c_ulong;
 pub type spx_int32_t = int32_t;
-#[derive ( Copy , Clone )]
-#[repr ( C )]
-pub struct _IO_marker {
-    pub _next: *mut _IO_marker,
-    pub _sbuf: *mut _IO_FILE_0,
-    pub _pos: libc::c_int,
-}
-pub type __dev_t = libc::c_ulong;
 #[derive ( Copy , Clone )]
 #[repr ( C )]
 pub struct FuncDef {
@@ -69,22 +56,16 @@ pub struct FuncDef {
 }
 pub type int32_t = libc::c_int;
 pub type spx_int16_t = int16_t;
-pub const _POSIX_: _LIB_VERSION_TYPE = 2;
-pub const _ISOC_: _LIB_VERSION_TYPE = 3;
 pub type spx_word16_t = libc::c_float;
-pub type _IO_FILE = _IO_FILE_0;
 pub type spx_word32_t = libc::c_float;
-pub const _XOPEN_: _LIB_VERSION_TYPE = 1;
 pub type int16_t = libc::c_short;
 pub type __uint32_t = libc::c_uint;
-pub type unnamed = libc::c_uint;
 pub const RESAMPLER_ERR_SUCCESS: unnamed = 0;
 pub type resampler_basic_func =
     Option<unsafe extern "C" fn(_: *mut SpeexResamplerState, _: spx_uint32_t,
                                 _: *const spx_word16_t, _: *mut spx_uint32_t,
                                 _: *mut spx_word16_t, _: *mut spx_uint32_t)
                -> libc::c_int>;
-pub type _IO_lock_t = ();
 pub const RESAMPLER_ERR_BAD_STATE: unnamed = 2;
 pub const RESAMPLER_ERR_MAX_ERROR: unnamed = 6;
 #[derive ( Copy , Clone )]
@@ -96,7 +77,6 @@ pub struct QualityMapping {
     pub upsample_bandwidth: libc::c_float,
     pub window_func: *const FuncDef,
 }
-pub type FILE = _IO_FILE_0;
 #[derive ( Copy , Clone )]
 #[repr ( C )]
 pub union unnamed_0 {
@@ -104,39 +84,7 @@ pub union unnamed_0 {
     __i: [libc::c_int; 3],
 }
 pub type spx_uint32_t = uint32_t;
-#[derive ( Copy , Clone )]
-#[repr ( C )]
-pub struct _IO_FILE_0 {
-    pub _flags: libc::c_int,
-    pub _IO_read_ptr: *mut libc::c_char,
-    pub _IO_read_end: *mut libc::c_char,
-    pub _IO_read_base: *mut libc::c_char,
-    pub _IO_write_base: *mut libc::c_char,
-    pub _IO_write_ptr: *mut libc::c_char,
-    pub _IO_write_end: *mut libc::c_char,
-    pub _IO_buf_base: *mut libc::c_char,
-    pub _IO_buf_end: *mut libc::c_char,
-    pub _IO_save_base: *mut libc::c_char,
-    pub _IO_backup_base: *mut libc::c_char,
-    pub _IO_save_end: *mut libc::c_char,
-    pub _markers: *mut _IO_marker,
-    pub _chain: *mut _IO_FILE_0,
-    pub _fileno: libc::c_int,
-    pub _flags2: libc::c_int,
-    pub _old_offset: __off_t,
-    pub _cur_column: libc::c_ushort,
-    pub _vtable_offset: libc::c_schar,
-    pub _shortbuf: [libc::c_char; 1],
-    pub _lock: *mut libc::c_void,
-    pub _offset: __off64_t,
-    pub __pad1: *mut libc::c_void,
-    pub __pad2: *mut libc::c_void,
-    pub __pad3: *mut libc::c_void,
-    pub __pad4: *mut libc::c_void,
-    pub __pad5: size_t,
-    pub _mode: libc::c_int,
-    pub _unused2: [libc::c_char; 20],
-}
+
 pub const RESAMPLER_ERR_ALLOC_FAILED: unnamed = 1;
 pub type __compar_fn_t =
     Option<unsafe extern "C" fn(_: *const libc::c_void,
