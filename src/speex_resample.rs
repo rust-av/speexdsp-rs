@@ -41,7 +41,7 @@ pub struct SpeexResamplerState_ {
     pub last_sample: *mut spx_int32_t,
     pub samp_frac_num: *mut spx_uint32_t,
     pub magic_samples: *mut spx_uint32_t,
-    pub mem: *mut spx_word16_t,
+    pub mem: Vec<spx_word16_t>,
     pub sinc_table: Vec<spx_word16_t>,
     pub sinc_table_length: spx_uint32_t,
     pub resampler_ptr: resampler_basic_func,
@@ -174,7 +174,6 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
             (*st).sinc_table_length = 0i32 as spx_uint32_t;
             (*st).mem_alloc_size = 0i32 as spx_uint32_t;
             (*st).filt_len = 0i32 as spx_uint32_t;
-            (*st).mem = 0 as *mut spx_word16_t;
             (*st).resampler_ptr = None;
             (*st).cutoff = 1.0f32;
             (*st).nb_channels = nb_channels;
@@ -228,7 +227,6 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
  */
 #[no_mangle]
 pub unsafe extern "C" fn speex_resampler_destroy(mut st: *mut SpeexResamplerState) -> () {
-    speex_free((*st).mem as *mut libc::c_void);
     speex_free((*st).last_sample as *mut libc::c_void);
     speex_free((*st).magic_samples as *mut libc::c_void);
     speex_free((*st).samp_frac_num as *mut libc::c_void);
@@ -391,22 +389,9 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                 {
                                     current_block = 13465332693182510667;
                                 } else {
-                                    let mut mem: *mut spx_word16_t = speex_realloc(
-                                        (*st).mem as *mut libc::c_void,
-                                        ((*st).nb_channels.wrapping_mul(min_alloc_size)
-                                            as libc::c_ulong)
-                                            .wrapping_mul(::std::mem::size_of::<spx_word16_t>()
-                                                as libc::c_ulong)
-                                            as libc::c_int,
-                                    )
-                                        as *mut spx_word16_t;
-                                    if mem.is_null() {
-                                        current_block = 13465332693182510667;
-                                    } else {
-                                        (*st).mem = mem;
-                                        (*st).mem_alloc_size = min_alloc_size;
-                                        current_block = 15089075282327824602;
-                                    }
+                                    (*st).mem = Vec::with_capacity((*st).nb_channels.wrapping_mul(min_alloc_size) as usize);
+                                    (*st).mem_alloc_size = min_alloc_size;
+                                    current_block = 15089075282327824602;
                                 }
                             } else {
                                 current_block = 15089075282327824602;
@@ -415,12 +400,9 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                 13465332693182510667 => {}
                                 _ => {
                                     if 0 == (*st).started {
-                                        let mut i_1: spx_uint32_t = 0;
-                                        while i_1
-                                            < (*st).nb_channels.wrapping_mul((*st).mem_alloc_size)
-                                        {
-                                            *(*st).mem.offset(i_1 as isize) = 0i32 as spx_word16_t;
-                                            i_1 = i_1.wrapping_add(1)
+                                        let dim: usize = (*st).nb_channels.wrapping_mul((*st).mem_alloc_size) as usize;
+                                        for _ in 0..dim {
+                                            (*st).mem.push(0.0);
                                         }
                                     } else if (*st).filt_len > old_length {
                                         let mut i_2: spx_uint32_t = (*st).nb_channels;
@@ -446,7 +428,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                 if !(0 != fresh1) {
                                                     break;
                                                 }
-                                                *(*st).mem.offset(
+                                                println!("{}", i_2.wrapping_mul((*st).mem_alloc_size).wrapping_add(j_0).wrapping_add(*(*st).magic_samples.offset(i_2 as isize)));
+                                                (*st).mem[
                                                     i_2.wrapping_mul((*st).mem_alloc_size)
                                                         .wrapping_add(j_0)
                                                         .wrapping_add(
@@ -454,20 +437,21 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                                 .magic_samples
                                                                 .offset(i_2 as isize),
                                                         )
-                                                        as isize,
-                                                ) = *(*st).mem.offset(
+                                                        as usize
+                                                ] = (*st).mem[
                                                     i_2.wrapping_mul(old_alloc_size)
                                                         .wrapping_add(j_0)
-                                                        as isize,
-                                                )
+                                                        as usize
+                                                ];
+                                                println!("here");
                                             }
                                             j_0 = 0i32 as spx_uint32_t;
                                             while j_0 < *(*st).magic_samples.offset(i_2 as isize) {
-                                                *(*st).mem.offset(
+                                                (*st).mem[
                                                     i_2.wrapping_mul((*st).mem_alloc_size)
                                                         .wrapping_add(j_0)
-                                                        as isize,
-                                                ) = 0i32 as spx_word16_t;
+                                                        as usize
+                                                ] = 0i32 as spx_word16_t;
                                                 j_0 = j_0.wrapping_add(1)
                                             }
                                             *(*st).magic_samples.offset(i_2 as isize) =
@@ -476,7 +460,7 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                 j_0 = 0i32 as spx_uint32_t;
                                                 while j_0 < olen.wrapping_sub(1i32 as libc::c_uint)
                                                 {
-                                                    *(*st).mem.offset(
+                                                    (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
                                                             .wrapping_add(
                                                                 (*st)
@@ -486,8 +470,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                                     )
                                                                     .wrapping_sub(j_0),
                                                             )
-                                                            as isize,
-                                                    ) = *(*st).mem.offset(
+                                                            as usize
+                                                    ] = (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
                                                             .wrapping_add(
                                                                 olen.wrapping_sub(
@@ -495,8 +479,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                                 )
                                                                 .wrapping_sub(j_0),
                                                             )
-                                                            as isize,
-                                                    );
+                                                            as usize
+                                                    ];
                                                     j_0 = j_0.wrapping_add(1)
                                                 }
                                                 while j_0
@@ -504,7 +488,7 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                         .filt_len
                                                         .wrapping_sub(1i32 as libc::c_uint)
                                                 {
-                                                    *(*st).mem.offset(
+                                                    (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
                                                             .wrapping_add(
                                                                 (*st)
@@ -514,8 +498,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                                     )
                                                                     .wrapping_sub(j_0),
                                                             )
-                                                            as isize,
-                                                    ) = 0i32 as spx_word16_t;
+                                                            as usize
+                                                    ] = 0i32 as spx_word16_t;
                                                     j_0 = j_0.wrapping_add(1)
                                                 }
                                                 let ref mut fresh2 =
@@ -543,11 +527,11 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                                 .offset(i_2 as isize),
                                                         )
                                                 {
-                                                    *(*st).mem.offset(
+                                                    (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
                                                             .wrapping_add(j_0)
-                                                            as isize,
-                                                    ) = *(*st).mem.offset(
+                                                            as usize
+                                                    ] = (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
                                                             .wrapping_add(j_0)
                                                             .wrapping_add(
@@ -555,8 +539,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                                     .magic_samples
                                                                     .offset(i_2 as isize),
                                                             )
-                                                            as isize,
-                                                    );
+                                                            as usize
+                                                    ];
                                                     j_0 = j_0.wrapping_add(1)
                                                 }
                                             }
@@ -579,11 +563,11 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                     )
                                                     .wrapping_add(old_magic)
                                             {
-                                                *(*st).mem.offset(
+                                                (*st).mem[
                                                     i_3.wrapping_mul((*st).mem_alloc_size)
                                                         .wrapping_add(j_1)
-                                                        as isize,
-                                                ) = *(*st).mem.offset(
+                                                        as usize
+                                                ] = (*st).mem[
                                                     i_3.wrapping_mul((*st).mem_alloc_size)
                                                         .wrapping_add(j_1)
                                                         .wrapping_add(
@@ -591,8 +575,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                                 .magic_samples
                                                                 .offset(i_3 as isize),
                                                         )
-                                                        as isize,
-                                                );
+                                                        as usize
+                                                ];
                                                 j_1 = j_1.wrapping_add(1)
                                             }
                                             let ref mut fresh3 =
@@ -1448,9 +1432,9 @@ pub unsafe extern "C" fn speex_resampler_process_float(
     let mut j: libc::c_int;
     let mut ilen: spx_uint32_t = *in_len;
     let mut olen: spx_uint32_t = *out_len;
-    let mut x: *mut spx_word16_t = (*st)
+    let mut x: &mut [spx_word16_t] = &mut(*st)
         .mem
-        .offset(channel_index.wrapping_mul((*st).mem_alloc_size) as isize);
+        [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
     let filt_offs: libc::c_int = (*st).filt_len.wrapping_sub(1i32 as libc::c_uint) as libc::c_int;
     let xlen: spx_uint32_t = (*st).mem_alloc_size.wrapping_sub(filt_offs as libc::c_uint);
     let istride: libc::c_int = (*st).in_stride;
@@ -1469,13 +1453,13 @@ pub unsafe extern "C" fn speex_resampler_process_float(
             if !in_0.is_null() {
                 j = 0i32;
                 while (j as libc::c_uint) < ichunk {
-                    *x.offset((j + filt_offs) as isize) = *in_0.offset((j * istride) as isize);
+                    x[(j + filt_offs) as usize] = *in_0.offset((j * istride) as isize);
                     j += 1
                 }
             } else {
                 j = 0i32;
                 while (j as libc::c_uint) < ichunk {
-                    *x.offset((j + filt_offs) as isize) = 0i32 as spx_word16_t;
+                    x[(j + filt_offs) as usize] = 0i32 as spx_word16_t;
                     j += 1
                 }
             }
@@ -1511,14 +1495,14 @@ unsafe extern "C" fn speex_resampler_process_native(
     mut out_len: *mut spx_uint32_t,
 ) -> libc::c_int {
     let N: libc::c_int = (*st).filt_len as libc::c_int;
-    let mut mem: *mut spx_word16_t = (*st)
+    let mut mem: &mut[spx_word16_t] = &mut(*st)
         .mem
-        .offset(channel_index.wrapping_mul((*st).mem_alloc_size) as isize);
+        [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
     (*st).started = 1i32;
     let out_sample: libc::c_int = (*st).resampler_ptr.expect("non-null function pointer")(
         st,
         channel_index,
-        mem,
+        mem.as_ptr(),
         in_len,
         out,
         out_len,
@@ -1532,7 +1516,7 @@ unsafe extern "C" fn speex_resampler_process_native(
     let ilen: spx_uint32_t = *in_len;
     let mut j: libc::c_int = 0i32;
     while j < N - 1i32 {
-        *mem.offset(j as isize) = *mem.offset((j as libc::c_uint).wrapping_add(ilen) as isize);
+        mem[j as usize] = mem[(j as libc::c_uint).wrapping_add(ilen) as usize];
         j += 1
     }
     return RESAMPLER_ERR_SUCCESS as libc::c_int;
@@ -1544,9 +1528,9 @@ unsafe extern "C" fn speex_resampler_magic(
     mut out_len: spx_uint32_t,
 ) -> libc::c_int {
     let mut tmp_in_len: spx_uint32_t = *(*st).magic_samples.offset(channel_index as isize);
-    let mut mem: *mut spx_word16_t = (*st)
+    let mut mem: &mut[spx_word16_t] = &mut(*st)
         .mem
-        .offset(channel_index.wrapping_mul((*st).mem_alloc_size) as isize);
+        [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
     let N: libc::c_int = (*st).filt_len as libc::c_int;
     speex_resampler_process_native(
         st,
@@ -1560,11 +1544,11 @@ unsafe extern "C" fn speex_resampler_magic(
     if 0 != *(*st).magic_samples.offset(channel_index as isize) {
         let mut i: spx_uint32_t = 0;
         while i < *(*st).magic_samples.offset(channel_index as isize) {
-            *mem.offset(((N - 1i32) as libc::c_uint).wrapping_add(i) as isize) = *mem.offset(
+            mem[((N - 1i32) as libc::c_uint).wrapping_add(i) as usize] = mem[
                 ((N - 1i32) as libc::c_uint)
                     .wrapping_add(i)
-                    .wrapping_add(tmp_in_len) as isize,
-            );
+                    .wrapping_add(tmp_in_len) as usize
+            ];
             i = i.wrapping_add(1)
         }
     }
@@ -1595,9 +1579,9 @@ pub unsafe extern "C" fn speex_resampler_process_int(
     let ostride_save: libc::c_int = (*st).out_stride;
     let mut ilen: spx_uint32_t = *in_len;
     let mut olen: spx_uint32_t = *out_len;
-    let mut x: *mut spx_word16_t = (*st)
+    let mut x: &mut[spx_word16_t] = &mut(*st)
         .mem
-        .offset(channel_index.wrapping_mul((*st).mem_alloc_size) as isize);
+        [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
     let xlen: spx_uint32_t = (*st)
         .mem_alloc_size
         .wrapping_sub((*st).filt_len.wrapping_sub(1i32 as libc::c_uint));
@@ -1625,21 +1609,21 @@ pub unsafe extern "C" fn speex_resampler_process_int(
             if !in_0.is_null() {
                 j = 0i32;
                 while (j as libc::c_uint) < ichunk {
-                    *x.offset(
+                    x[
                         (j as libc::c_uint)
                             .wrapping_add((*st).filt_len)
-                            .wrapping_sub(1i32 as libc::c_uint) as isize,
-                    ) = *in_0.offset((j * istride_save) as isize) as spx_word16_t;
+                            .wrapping_sub(1i32 as libc::c_uint) as usize
+                    ] = *in_0.offset((j * istride_save) as isize) as spx_word16_t;
                     j += 1
                 }
             } else {
                 j = 0i32;
                 while (j as libc::c_uint) < ichunk {
-                    *x.offset(
+                    x[
                         (j as libc::c_uint)
                             .wrapping_add((*st).filt_len)
-                            .wrapping_sub(1i32 as libc::c_uint) as isize,
-                    ) = 0i32 as spx_word16_t;
+                            .wrapping_sub(1i32 as libc::c_uint) as usize
+                    ] = 0i32 as spx_word16_t;
                     j += 1
                 }
             }
@@ -1957,14 +1941,7 @@ pub unsafe extern "C" fn speex_resampler_reset_mem(
         *(*st).samp_frac_num.offset(i as isize) = 0i32 as spx_uint32_t;
         i = i.wrapping_add(1)
     }
-    i = 0u32;
-    while i
-        < (*st)
-            .nb_channels
-            .wrapping_mul((*st).filt_len.wrapping_sub(1i32 as libc::c_uint))
-    {
-        *(*st).mem.offset(i as isize) = 0i32 as spx_word16_t;
-        i = i.wrapping_add(1)
-    }
+    (*st).mem = vec![0.0; (*st).nb_channels
+            .wrapping_mul((*st).filt_len.wrapping_sub(1i32 as libc::c_uint)) as usize];
     return RESAMPLER_ERR_SUCCESS as libc::c_int;
 }
