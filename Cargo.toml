@@ -13,6 +13,9 @@ readme = "README.md"
 [features]
 sys = ["speexdsp-sys"]
 
+[dev-dependencies]
+byteorder = "1.3"
+
 [dependencies]
 speexdsp-sys = { version = "0.1.1", path = "speexdsp-sys", optional = true }
 libc = "0.2.42"
