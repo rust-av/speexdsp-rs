@@ -52,12 +52,14 @@ mod sys {
     #[derive(Clone, Copy, Debug)]
     pub enum Error {
         FailedInit,
+        UnknownRequest,
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let v = match self {
                 Error::FailedInit => "Failed to initialize",
+                Error::UnknownRequest => "The request is unknown",
             };
 
             write!(f, "{}", v)
@@ -111,10 +113,15 @@ mod sys {
             &mut self,
             request: SpeexPreprocessConst,
             mut ptr: f32
-        ) -> usize {
+        ) -> Result<(), Error> {
             let ptr_v = (&mut ptr) as *mut f32 as *mut c_void;
-            unsafe {
+            let ret = unsafe {
                 speex_preprocess_ctl(self.st, request as i32, ptr_v) as usize
+            };
+            if ret != 0 {
+                Err(Error::UnknownRequest)
+            } else {
+                Ok(())
             }
         }
     }

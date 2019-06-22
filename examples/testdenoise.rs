@@ -14,12 +14,12 @@ fn main() {
     let mut buffer: [u8; NN * 2] = [0; NN * 2];
 
     let mut st = SpeexPreprocess::new(NN, 8000).unwrap();
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DENOISE, 1f32);
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_AGC, 0f32);
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_AGC_LEVEL, 8000f32);
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB, 0f32);
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB_DECAY, 0f32);
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB_LEVEL, 0f32);
+    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DENOISE, 1f32).unwrap();
+    st.preprocess_ctl(SPEEX_PREPROCESS_SET_AGC, 0f32).unwrap();
+    st.preprocess_ctl(SPEEX_PREPROCESS_SET_AGC_LEVEL, 8000f32).unwrap();
+    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB, 0f32).unwrap();
+    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB_DECAY, 0f32).unwrap();
+    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB_LEVEL, 0f32).unwrap();
 
     while let Ok(n) = std::io::stdin().read(&mut buffer) {
         if n == 0 {
