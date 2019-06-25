@@ -109,12 +109,12 @@ mod sys {
             };
         }
 
-        pub fn preprocess_ctl(
+        pub fn preprocess_ctl<T>(
             &mut self,
             request: SpeexPreprocessConst,
-            mut ptr: f32
+            mut ptr: T
         ) -> Result<(), Error> {
-            let ptr_v = (&mut ptr) as *mut f32 as *mut c_void;
+            let ptr_v = (&mut ptr) as *mut T as *mut c_void;
             let ret = unsafe {
                 speex_preprocess_ctl(self.st, request as i32, ptr_v) as usize
             };
