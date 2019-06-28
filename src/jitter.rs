@@ -4,6 +4,10 @@ mod sys {
     use std::ffi::c_void;
     use std::fmt;
 
+    const BUFFER_OK: i32 = JITTER_BUFFER_OK as i32;
+    const BUFFER_MISSING: i32 = JITTER_BUFFER_MISSING as i32;
+    const BUFFER_INSERTION: i32 = JITTER_BUFFER_INSERTION as i32;
+
     #[derive(Clone, Copy, Debug)]
     pub enum SpeexJitterConst {
         JITTER_BUFFER_SET_MARGIN = 0,
@@ -21,37 +25,70 @@ mod sys {
         JITTER_BUFFER_GET_LATE_COST = 13,
     }
 
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, Debug, PartialEq)]
     pub enum Error {
-        FailedInit,
-        UnknownRequest,
+        BufferOk = 0,
+        BufferMissing = 1,
+        BufferInsertion = 2,
+        BufferInternalError = -1,
+        BufferBadArgument = -2,
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let v = match self {
-                Error::FailedInit => "Failed to initialize",
-                Error::UnknownRequest => "The request is unknown",
+                Error::BufferOk => "The buffer is ok",
+                Error::BufferMissing => "The buffer is missing",
+                Error::BufferInsertion => "Bad insertion into the buffer",
+                Error::BufferInternalError => "Internal Error",
+                Error::BufferBadArgument => "Bad Argument...",
             };
 
             write!(f, "{}", v)
         }
     }
 
+    impl Error {
+        fn from_i32(v: i32) -> Self {
+            match v {
+                BUFFER_OK => Error::BufferOk,
+                BUFFER_MISSING => Error::BufferMissing,
+                BUFFER_INSERTION => Error::BufferInsertion,
+                JITTER_BUFFER_INTERNAL_ERROR => Error::BufferInternalError,
+                JITTER_BUFFER_BAD_ARGUMENT => Error::BufferBadArgument,
+                _ => unreachable!(),
+            }
+        }
+    }
+
     pub struct SpeexBufferPacket {
-        pt: *mut JitterBufferPacket,
+        pt: JitterBufferPacket,
     }
 
     impl SpeexBufferPacket {
-        pub fn new(
+        pub fn new() -> Self {
+            let pt = JitterBufferPacket {
+                data: 0 as *mut i8,
+                len: 0,
+                timestamp: 0,
+                span: 0,
+                sequence: 0,
+                user_data: 0,
+            };
+
+            SpeexBufferPacket { pt: pt }
+        }
+
+        pub fn create(
+            &mut self,
             data: &mut [i8],
             len: usize,
             timestamp: usize,
             span: usize,
             sequence: usize,
             user_data: usize,
-        ) -> Self {
-            let mut pt = JitterBufferPacket {
+        ) {
+            let pt = JitterBufferPacket {
                 data: data.as_mut_ptr(),
                 len: len as u32,
                 timestamp: timestamp as u32,
@@ -59,9 +96,35 @@ mod sys {
                 sequence: sequence as u16,
                 user_data: user_data as u32,
             };
-            SpeexBufferPacket {
-                pt: &mut pt as *mut JitterBufferPacket,
-            }
+            self.pt = pt;
+        }
+
+        pub fn len(&self) -> usize {
+            self.pt.len as usize
+        }
+
+        pub fn timestamp(&self) -> usize {
+            self.pt.timestamp as usize
+        }
+
+        pub fn span(&self) -> usize {
+            self.pt.span as usize
+        }
+
+        pub fn sequence(&self) -> usize {
+            self.pt.sequence as usize
+        }
+
+        pub fn user_data(&self) -> usize {
+            self.pt.user_data as usize
+        }
+
+        pub fn set_data(&mut self, data: &mut [i8]) {
+            self.pt.data = data.as_mut_ptr();
+        }
+
+        pub fn set_len(&mut self, len: usize) {
+            self.pt.len = len as u32;
         }
     }
 
@@ -74,7 +137,7 @@ mod sys {
             let st = unsafe { jitter_buffer_init(step_size as i32) };
 
             if st.is_null() {
-                Err(Error::FailedInit)
+                Err(Error::BufferInternalError)
             } else {
                 Ok(SpeexJitter { st })
             }
@@ -84,24 +147,32 @@ mod sys {
             unsafe { jitter_buffer_reset(self.st) };
         }
 
-        pub fn buffer_put(&mut self, packet: SpeexBufferPacket) {
-            unsafe { jitter_buffer_put(self.st, packet.pt) };
+        pub fn buffer_put(&mut self, packet: &SpeexBufferPacket) {
+            unsafe { jitter_buffer_put(self.st, &packet.pt as *const JitterBufferPacket) };
         }
 
         pub fn buffer_get(
             &mut self,
-            packet: SpeexBufferPacket,
+            packet: &mut SpeexBufferPacket,
             desired_span: usize,
             offset: usize,
-        ) -> usize {
-            unsafe {
-                jitter_buffer_get(self.st, packet.pt, desired_span as i32, offset as *mut i32)
-                    as usize
-            }
+        ) -> Error {
+            let err_i32 = unsafe {
+                jitter_buffer_get(
+                    self.st,
+                    &mut packet.pt as *mut JitterBufferPacket,
+                    desired_span as i32,
+                    offset as *mut i32,
+                )
+            };
+            Error::from_i32(err_i32)
         }
 
-        pub fn buffer_get_another(&mut self, packet: SpeexBufferPacket) -> usize {
-            unsafe { jitter_buffer_get_another(self.st, packet.pt) as usize }
+        pub fn buffer_get_another(&mut self, packet: &mut SpeexBufferPacket) -> Error {
+            let err_i32 = unsafe {
+                jitter_buffer_get_another(self.st, &mut packet.pt as *mut JitterBufferPacket)
+            };
+            Error::from_i32(err_i32)
         }
 
         pub fn buffer_get_pointer_timestap(&mut self) -> usize {
@@ -120,7 +191,7 @@ mod sys {
             let ret =
                 unsafe { jitter_buffer_ctl(self.st, request as i32, ptr as *mut c_void) as usize };
             if ret != 0 {
-                Err(Error::UnknownRequest)
+                Err(Error::BufferBadArgument)
             } else {
                 Ok(())
             }
@@ -128,12 +199,17 @@ mod sys {
 
         pub fn buffer_update_delay(
             &mut self,
-            packet: SpeexBufferPacket,
+            packet: &mut SpeexBufferPacket,
             start_offset: usize,
-        ) -> usize {
-            unsafe {
-                jitter_buffer_update_delay(self.st, packet.pt, start_offset as *mut i32) as usize
-            }
+        ) -> Error {
+            let err_i32 = unsafe {
+                jitter_buffer_update_delay(
+                    self.st,
+                    &mut packet.pt as *mut JitterBufferPacket,
+                    start_offset as *mut i32,
+                )
+            };
+            Error::from_i32(err_i32)
         }
     }
 
