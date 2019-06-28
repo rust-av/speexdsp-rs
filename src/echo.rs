@@ -30,6 +30,7 @@ mod sys {
         }
     }
 
+    #[derive(Clone)]
     pub struct SpeexEcho {
         st: *mut SpeexEchoState,
     }
@@ -111,6 +112,10 @@ mod sys {
             } else {
                 Ok(())
             }
+        }
+
+        pub(crate) fn get_ptr(&self) -> *mut SpeexEchoState {
+            self.st
         }
     }
 
