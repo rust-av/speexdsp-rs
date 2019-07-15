@@ -2,10 +2,10 @@ extern crate autotools;
 extern crate bindgen;
 extern crate metadeps;
 
-use std::path::PathBuf;
-use std::io::Write;
 use std::env;
 use std::fs::File;
+use std::io::Write;
+use std::path::PathBuf;
 
 fn format_write(builder: bindgen::Builder) -> String {
     builder
@@ -17,7 +17,7 @@ fn format_write(builder: bindgen::Builder) -> String {
 }
 
 fn main() {
-    if cfg!(feature="build") {
+    if cfg!(feature = "build") {
         // TODO: decide how to fetch the source
         let dst = autotools::build("speexdsp");
 
@@ -34,7 +34,8 @@ fn main() {
         let mut builder = bindgen::builder().header(format!("data/{}.h", e));
 
         for header in headers.iter() {
-            builder = builder.clang_arg("-I").clang_arg(header.to_str().unwrap());
+            builder =
+                builder.clang_arg("-I").clang_arg(header.to_str().unwrap());
         }
 
         // Manually fix the comment so rustdoc won't try to pick them

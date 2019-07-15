@@ -76,7 +76,7 @@ mod sys {
                 user_data: 0,
             };
 
-            SpeexBufferPacket { pt: pt }
+            SpeexBufferPacket { pt }
         }
 
         pub fn create(
@@ -148,7 +148,7 @@ mod sys {
         }
 
         pub fn buffer_put(&mut self, packet: &SpeexBufferPacket) {
-            unsafe { jitter_buffer_put(self.st, &packet.pt as *const JitterBufferPacket) };
+            unsafe { jitter_buffer_put(self.st, &packet.pt) };
         }
 
         pub fn buffer_get(
@@ -160,7 +160,7 @@ mod sys {
             let err_i32 = unsafe {
                 jitter_buffer_get(
                     self.st,
-                    &mut packet.pt as *mut JitterBufferPacket,
+                    &mut packet.pt,
                     desired_span as i32,
                     offset as *mut i32,
                 )
@@ -168,10 +168,12 @@ mod sys {
             Error::from_i32(err_i32)
         }
 
-        pub fn buffer_get_another(&mut self, packet: &mut SpeexBufferPacket) -> Error {
-            let err_i32 = unsafe {
-                jitter_buffer_get_another(self.st, &mut packet.pt as *mut JitterBufferPacket)
-            };
+        pub fn buffer_get_another(
+            &mut self,
+            packet: &mut SpeexBufferPacket,
+        ) -> Error {
+            let err_i32 =
+                unsafe { jitter_buffer_get_another(self.st, &mut packet.pt) };
             Error::from_i32(err_i32)
         }
 
@@ -187,9 +189,15 @@ mod sys {
             unsafe { jitter_buffer_remaining_span(self.st, rem as u32) };
         }
 
-        pub fn buffer_ctl(&mut self, request: SpeexJitterConst, ptr: usize) -> Result<(), Error> {
-            let ret =
-                unsafe { jitter_buffer_ctl(self.st, request as i32, ptr as *mut c_void) as usize };
+        pub fn buffer_ctl(
+            &mut self,
+            request: SpeexJitterConst,
+            ptr: usize,
+        ) -> Result<(), Error> {
+            let ret = unsafe {
+                jitter_buffer_ctl(self.st, request as i32, ptr as *mut c_void)
+                    as usize
+            };
             if ret != 0 {
                 Err(Error::BufferBadArgument)
             } else {
@@ -205,7 +213,7 @@ mod sys {
             let err_i32 = unsafe {
                 jitter_buffer_update_delay(
                     self.st,
-                    &mut packet.pt as *mut JitterBufferPacket,
+                    &mut packet.pt,
                     start_offset as *mut i32,
                 )
             };

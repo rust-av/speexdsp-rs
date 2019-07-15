@@ -97,9 +97,16 @@ mod sys {
     }
 
     impl SpeexPreprocess {
-        pub fn new(frame_size: usize, sampling_rate: usize) -> Result<Self, Error> {
-            let st =
-                unsafe { speex_preprocess_state_init(frame_size as i32, sampling_rate as i32) };
+        pub fn new(
+            frame_size: usize,
+            sampling_rate: usize,
+        ) -> Result<Self, Error> {
+            let st = unsafe {
+                speex_preprocess_state_init(
+                    frame_size as i32,
+                    sampling_rate as i32,
+                )
+            };
 
             if st.is_null() {
                 Err(Error::FailedInit)
@@ -113,11 +120,16 @@ mod sys {
         }
 
         pub fn preprocess(&mut self, x: &mut [i16], echo: usize) -> usize {
-            unsafe { speex_preprocess(self.st, x.as_mut_ptr(), echo as *mut i32) as usize }
+            unsafe {
+                speex_preprocess(self.st, x.as_mut_ptr(), echo as *mut i32)
+                    as usize
+            }
         }
 
         pub fn preprocess_estimate_update(&mut self, x: &mut [i16]) {
-            unsafe { speex_preprocess_estimate_update(self.st, x.as_mut_ptr()) };
+            unsafe {
+                speex_preprocess_estimate_update(self.st, x.as_mut_ptr())
+            };
         }
 
         pub fn preprocess_ctl<T: Into<Variant>>(
@@ -126,17 +138,24 @@ mod sys {
             value: T,
         ) -> Result<(), Error> {
             let ptr_v = match (request, value.into()) {
-                (SpeexPreprocessConst::SPEEX_PREPROCESS_SET_DEREVERB_DECAY, Variant::F32(val))
-                | (SpeexPreprocessConst::SPEEX_PREPROCESS_SET_DEREVERB_LEVEL, Variant::F32(val)) => {
-                    &val as *const f32 as *mut c_void
-                }
-                (SpeexPreprocessConst::SPEEX_PREPROCESS_SET_ECHO_STATE, Variant::Echo(val)) => {
-                    val.get_ptr() as *mut c_void
-                }
+                (
+                    SpeexPreprocessConst::SPEEX_PREPROCESS_SET_DEREVERB_DECAY,
+                    Variant::F32(val),
+                )
+                | (
+                    SpeexPreprocessConst::SPEEX_PREPROCESS_SET_DEREVERB_LEVEL,
+                    Variant::F32(val),
+                ) => &val as *const f32 as *mut c_void,
+                (
+                    SpeexPreprocessConst::SPEEX_PREPROCESS_SET_ECHO_STATE,
+                    Variant::Echo(val),
+                ) => val.get_ptr() as *mut c_void,
                 (_, Variant::U32(val)) => val as *mut c_void,
                 _ => panic!("This type is not accepted"),
             };
-            let ret = unsafe { speex_preprocess_ctl(self.st, request as i32, ptr_v) as usize };
+            let ret = unsafe {
+                speex_preprocess_ctl(self.st, request as i32, ptr_v) as usize
+            };
             if ret != 0 {
                 Err(Error::UnknownRequest)
             } else {

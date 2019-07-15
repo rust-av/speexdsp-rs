@@ -1,4 +1,4 @@
-#[cfg(feature="sys")]
+#[cfg(feature = "sys")]
 mod sys {
     use speexdsp_sys::resampler::*;
     use std::fmt;
@@ -19,7 +19,7 @@ mod sys {
                 Error::BadState => "Bad resampler state.",
                 Error::InvalidArg => "Invalid argument.",
                 Error::PtrOverlap => "Input and output buffers overlap.",
-                Error::Overflow => "Muldiv overflow."
+                Error::Overflow => "Muldiv overflow.",
             };
 
             write!(f, "{}", v)
@@ -69,14 +69,22 @@ mod sys {
         }
 
         pub fn set_rate(&mut self, in_rate: usize, out_rate: usize) {
-            unsafe { speex_resampler_set_rate(self.st, in_rate as u32, out_rate as u32) };
+            unsafe {
+                speex_resampler_set_rate(
+                    self.st,
+                    in_rate as u32,
+                    out_rate as u32,
+                )
+            };
         }
 
         pub fn get_rate(&self) -> (usize, usize) {
             let mut in_rate = 0;
             let mut out_rate = 0;
 
-            unsafe { speex_resampler_get_rate(self.st, &mut in_rate, &mut out_rate) };
+            unsafe {
+                speex_resampler_get_rate(self.st, &mut in_rate, &mut out_rate)
+            };
 
             (in_rate as usize, out_rate as usize)
         }
@@ -124,7 +132,9 @@ mod sys {
         }
 
         pub fn set_quality(&self, quality: usize) -> Result<(), Error> {
-            let ret = unsafe { speex_resampler_set_quality(self.st, quality as i32) };
+            let ret = unsafe {
+                speex_resampler_set_quality(self.st, quality as i32)
+            };
             if ret != 0 {
                 Err(Error::from_i32(ret))
             } else {
@@ -137,7 +147,6 @@ mod sys {
             unsafe { speex_resampler_get_quality(self.st, &mut c_get) };
             c_get as usize
         }
-
     }
 
     impl Drop for State {
@@ -147,9 +156,8 @@ mod sys {
     }
 }
 
-#[cfg(feature="sys")]
+#[cfg(feature = "sys")]
 pub use self::sys::{Error, State};
-
 
 pub mod native {
     use speex_resample::*;
@@ -171,7 +179,7 @@ pub mod native {
                 Error::BadState => "Bad resampler state.",
                 Error::InvalidArg => "Invalid argument.",
                 Error::PtrOverlap => "Input and output buffers overlap.",
-                Error::Overflow => "Muldiv overflow."
+                Error::Overflow => "Muldiv overflow.",
             };
 
             write!(f, "{}", v)
@@ -221,14 +229,22 @@ pub mod native {
         }
 
         pub fn set_rate(&mut self, in_rate: usize, out_rate: usize) {
-            unsafe { speex_resampler_set_rate(self.st, in_rate as u32, out_rate as u32) };
+            unsafe {
+                speex_resampler_set_rate(
+                    self.st,
+                    in_rate as u32,
+                    out_rate as u32,
+                )
+            };
         }
 
         pub fn get_rate(&self) -> (usize, usize) {
             let mut in_rate = 0;
             let mut out_rate = 0;
 
-            unsafe { speex_resampler_get_rate(self.st, &mut in_rate, &mut out_rate) };
+            unsafe {
+                speex_resampler_get_rate(self.st, &mut in_rate, &mut out_rate)
+            };
 
             (in_rate as usize, out_rate as usize)
         }
@@ -276,7 +292,9 @@ pub mod native {
         }
 
         pub fn set_quality(&self, quality: usize) -> Result<(), Error> {
-            let ret = unsafe { speex_resampler_set_quality(self.st, quality as i32) };
+            let ret = unsafe {
+                speex_resampler_set_quality(self.st, quality as i32)
+            };
             if ret != 0 {
                 Err(Error::from_i32(ret))
             } else {
@@ -289,7 +307,6 @@ pub mod native {
             unsafe { speex_resampler_get_quality(self.st, &mut c_get) };
             c_get as usize
         }
-
     }
 
     impl Drop for State {
@@ -300,5 +317,5 @@ pub mod native {
 
 }
 
-#[cfg(not(feature="sys"))]
+#[cfg(not(feature = "sys"))]
 pub use self::native::{Error, State};
