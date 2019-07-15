@@ -92,8 +92,12 @@ pub union unnamed_0 {
 pub type spx_uint32_t = uint32_t;
 
 pub const RESAMPLER_ERR_ALLOC_FAILED: unnamed = 1;
-pub type __compar_fn_t =
-    Option<unsafe extern "C" fn(_: *const libc::c_void, _: *const libc::c_void) -> libc::c_int>;
+pub type __compar_fn_t = Option<
+    unsafe extern "C" fn(
+        _: *const libc::c_void,
+        _: *const libc::c_void,
+    ) -> libc::c_int,
+>;
 /* * Create a new resampler with integer input and output rates.
  * @param nb_channels Number of channels to be processed
  * @param in_rate Input sampling rate (integer number of Hz).
@@ -155,9 +159,9 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
         }
         return 0 as *mut SpeexResamplerState;
     } else {
-        let mut st = speex_alloc(
-            ::std::mem::size_of::<SpeexResamplerState>() as libc::c_ulong as libc::c_int,
-        ) as *mut SpeexResamplerState;
+        let mut st = speex_alloc(::std::mem::size_of::<SpeexResamplerState>()
+            as libc::c_ulong as libc::c_int)
+            as *mut SpeexResamplerState;
         if st.is_null() {
             if !err.is_null() {
                 *err = RESAMPLER_ERR_ALLOC_FAILED as libc::c_int
@@ -180,26 +184,30 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
             (*st).in_stride = 1i32;
             (*st).out_stride = 1i32;
             (*st).buffer_size = 160i32 as spx_uint32_t;
-            (*st).last_sample = speex_alloc(
-                (nb_channels as libc::c_ulong)
-                    .wrapping_mul(::std::mem::size_of::<spx_int32_t>() as libc::c_ulong)
-                    as libc::c_int,
-            ) as *mut spx_int32_t;
+            (*st).last_sample =
+                speex_alloc((nb_channels as libc::c_ulong).wrapping_mul(
+                    ::std::mem::size_of::<spx_int32_t>() as libc::c_ulong,
+                ) as libc::c_int) as *mut spx_int32_t;
             if !(*st).last_sample.is_null() {
                 (*st).magic_samples = speex_alloc(
                     (nb_channels as libc::c_ulong)
-                        .wrapping_mul(::std::mem::size_of::<spx_uint32_t>() as libc::c_ulong)
+                        .wrapping_mul(::std::mem::size_of::<spx_uint32_t>()
+                            as libc::c_ulong)
                         as libc::c_int,
                 ) as *mut spx_uint32_t;
                 if !(*st).magic_samples.is_null() {
                     (*st).samp_frac_num = speex_alloc(
-                        (nb_channels as libc::c_ulong)
-                            .wrapping_mul(::std::mem::size_of::<spx_uint32_t>() as libc::c_ulong)
-                            as libc::c_int,
-                    ) as *mut spx_uint32_t;
+                        (nb_channels as libc::c_ulong).wrapping_mul(
+                            ::std::mem::size_of::<spx_uint32_t>()
+                                as libc::c_ulong,
+                        ) as libc::c_int,
+                    )
+                        as *mut spx_uint32_t;
                     if !(*st).samp_frac_num.is_null() {
                         speex_resampler_set_quality(st, quality);
-                        speex_resampler_set_rate_frac(st, ratio_num, ratio_den, in_rate, out_rate);
+                        speex_resampler_set_rate_frac(
+                            st, ratio_num, ratio_den, in_rate, out_rate,
+                        );
                         let filter_err: libc::c_int = update_filter(st);
                         if filter_err == RESAMPLER_ERR_SUCCESS as libc::c_int {
                             (*st).initialised = 1i32
@@ -226,7 +234,9 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
  * @param st Resampler state
  */
 #[no_mangle]
-pub unsafe extern "C" fn speex_resampler_destroy(mut st: *mut SpeexResamplerState) -> () {
+pub unsafe extern "C" fn speex_resampler_destroy(
+    mut st: *mut SpeexResamplerState,
+) -> () {
     speex_free((*st).last_sample as *mut libc::c_void);
     speex_free((*st).magic_samples as *mut libc::c_void);
     speex_free((*st).samp_frac_num as *mut libc::c_void);
@@ -236,17 +246,24 @@ pub unsafe extern "C" fn speex_resampler_destroy(mut st: *mut SpeexResamplerStat
 unsafe extern "C" fn speex_free(mut ptr: *mut libc::c_void) -> () {
     free(ptr);
 }
-unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_int {
+unsafe extern "C" fn update_filter(
+    mut st: *mut SpeexResamplerState,
+) -> libc::c_int {
     let mut current_block: u64;
     let mut old_length: spx_uint32_t = (*st).filt_len;
     let mut old_alloc_size: spx_uint32_t = (*st).mem_alloc_size;
     let mut min_sinc_table_length: spx_uint32_t = 0;
-    (*st).int_advance = (*st).num_rate.wrapping_div((*st).den_rate) as libc::c_int;
-    (*st).frac_advance = (*st).num_rate.wrapping_rem((*st).den_rate) as libc::c_int;
-    (*st).oversample = quality_map[(*st).quality as usize].oversample as spx_uint32_t;
-    (*st).filt_len = quality_map[(*st).quality as usize].base_length as spx_uint32_t;
+    (*st).int_advance =
+        (*st).num_rate.wrapping_div((*st).den_rate) as libc::c_int;
+    (*st).frac_advance =
+        (*st).num_rate.wrapping_rem((*st).den_rate) as libc::c_int;
+    (*st).oversample =
+        quality_map[(*st).quality as usize].oversample as spx_uint32_t;
+    (*st).filt_len =
+        quality_map[(*st).quality as usize].base_length as spx_uint32_t;
     if (*st).num_rate > (*st).den_rate {
-        (*st).cutoff = quality_map[(*st).quality as usize].downsample_bandwidth
+        (*st).cutoff = quality_map[(*st).quality as usize]
+            .downsample_bandwidth
             * (*st).den_rate as libc::c_float
             / (*st).num_rate as libc::c_float;
         if _muldiv(
@@ -258,19 +275,28 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
         {
             current_block = 13465332693182510667;
         } else {
-            (*st).filt_len = ((*st).filt_len.wrapping_sub(1i32 as libc::c_uint)
-                & !7i32 as libc::c_uint)
-                .wrapping_add(8i32 as libc::c_uint);
-            if (2i32 as libc::c_uint).wrapping_mul((*st).den_rate) < (*st).num_rate {
+            (*st).filt_len =
+                ((*st).filt_len.wrapping_sub(1i32 as libc::c_uint)
+                    & !7i32 as libc::c_uint)
+                    .wrapping_add(8i32 as libc::c_uint);
+            if (2i32 as libc::c_uint).wrapping_mul((*st).den_rate)
+                < (*st).num_rate
+            {
                 (*st).oversample >>= 1i32
             }
-            if (4i32 as libc::c_uint).wrapping_mul((*st).den_rate) < (*st).num_rate {
+            if (4i32 as libc::c_uint).wrapping_mul((*st).den_rate)
+                < (*st).num_rate
+            {
                 (*st).oversample >>= 1i32
             }
-            if (8i32 as libc::c_uint).wrapping_mul((*st).den_rate) < (*st).num_rate {
+            if (8i32 as libc::c_uint).wrapping_mul((*st).den_rate)
+                < (*st).num_rate
+            {
                 (*st).oversample >>= 1i32
             }
-            if (16i32 as libc::c_uint).wrapping_mul((*st).den_rate) < (*st).num_rate {
+            if (16i32 as libc::c_uint).wrapping_mul((*st).den_rate)
+                < (*st).num_rate
+            {
                 (*st).oversample >>= 1i32
             }
             if (*st).oversample < 1i32 as libc::c_uint {
@@ -286,21 +312,26 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
     }
     match current_block {
         8258075665625361029 => {
-            let use_direct: libc::c_int = ((*st).filt_len.wrapping_mul((*st).den_rate)
-                <= (*st)
-                    .filt_len
-                    .wrapping_mul((*st).oversample)
-                    .wrapping_add(8i32 as libc::c_uint)
-                && (2147483647i32 as libc::c_ulong)
-                    .wrapping_div(::std::mem::size_of::<spx_word16_t>() as libc::c_ulong)
-                    .wrapping_div((*st).den_rate as libc::c_ulong)
-                    >= (*st).filt_len as libc::c_ulong)
-                as libc::c_int;
+            let use_direct: libc::c_int =
+                ((*st).filt_len.wrapping_mul((*st).den_rate)
+                    <= (*st)
+                        .filt_len
+                        .wrapping_mul((*st).oversample)
+                        .wrapping_add(8i32 as libc::c_uint)
+                    && (2147483647i32 as libc::c_ulong)
+                        .wrapping_div(::std::mem::size_of::<spx_word16_t>()
+                            as libc::c_ulong)
+                        .wrapping_div((*st).den_rate as libc::c_ulong)
+                        >= (*st).filt_len as libc::c_ulong)
+                    as libc::c_int;
             if 0 != use_direct {
-                min_sinc_table_length = (*st).filt_len.wrapping_mul((*st).den_rate);
+                min_sinc_table_length =
+                    (*st).filt_len.wrapping_mul((*st).den_rate);
                 current_block = 14523784380283086299;
             } else if (2147483647i32 as libc::c_ulong)
-                .wrapping_div(::std::mem::size_of::<spx_word16_t>() as libc::c_ulong)
+                .wrapping_div(
+                    ::std::mem::size_of::<spx_word16_t>() as libc::c_ulong
+                )
                 .wrapping_sub(8i32 as libc::c_ulong)
                 .wrapping_div((*st).oversample as libc::c_ulong)
                 < (*st).filt_len as libc::c_ulong
@@ -317,7 +348,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                 13465332693182510667 => {}
                 _ => {
                     if (*st).sinc_table_length < min_sinc_table_length {
-                        (*st).sinc_table = vec![0.0; min_sinc_table_length as usize];
+                        (*st).sinc_table =
+                            vec![0.0; min_sinc_table_length as usize];
                         (*st).sinc_table_length = min_sinc_table_length;
                     }
                     current_block = 11650488183268122163;
@@ -328,27 +360,35 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                 let mut i: spx_uint32_t = 0;
                                 while i < (*st).den_rate {
                                     let mut j: spx_int32_t = 0;
-                                    while (j as libc::c_uint) < (*st).filt_len {
+                                    while (j as libc::c_uint) < (*st).filt_len
+                                    {
                                         (*st).sinc_table[i
                                             .wrapping_mul((*st).filt_len)
                                             .wrapping_add(j as libc::c_uint)
                                             as usize] = sinc(
                                             (*st).cutoff,
-                                            (j - (*st).filt_len as spx_int32_t / 2i32 + 1i32)
+                                            (j - (*st).filt_len as spx_int32_t
+                                                / 2i32
+                                                + 1i32)
                                                 as libc::c_float
                                                 - i as libc::c_float
-                                                    / (*st).den_rate as libc::c_float,
+                                                    / (*st).den_rate
+                                                        as libc::c_float,
                                             (*st).filt_len as libc::c_int,
-                                            quality_map[(*st).quality as usize].window_func,
+                                            quality_map
+                                                [(*st).quality as usize]
+                                                .window_func,
                                         );
                                         j += 1
                                     }
                                     i = i.wrapping_add(1)
                                 }
                                 if (*st).quality > 8i32 {
-                                    (*st).resampler_ptr = Some(resampler_basic_direct_double)
+                                    (*st).resampler_ptr =
+                                        Some(resampler_basic_direct_double)
                                 } else {
-                                    (*st).resampler_ptr = Some(resampler_basic_direct_single)
+                                    (*st).resampler_ptr =
+                                        Some(resampler_basic_direct_single)
                                 }
                             } else {
                                 let mut i_0: spx_int32_t = -4;
@@ -359,20 +399,31 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                         .wrapping_add(4i32 as libc::c_uint)
                                         as spx_int32_t
                                 {
-                                    (*st).sinc_table[(i_0 + 4i32) as usize] = sinc(
-                                        (*st).cutoff,
-                                        i_0 as libc::c_float / (*st).oversample as libc::c_float
-                                            - (*st).filt_len.wrapping_div(2i32 as libc::c_uint)
-                                                as libc::c_float,
-                                        (*st).filt_len as libc::c_int,
-                                        quality_map[(*st).quality as usize].window_func,
-                                    );
+                                    (*st).sinc_table[(i_0 + 4i32) as usize] =
+                                        sinc(
+                                            (*st).cutoff,
+                                            i_0 as libc::c_float
+                                                / (*st).oversample
+                                                    as libc::c_float
+                                                - (*st).filt_len.wrapping_div(
+                                                    2i32 as libc::c_uint,
+                                                )
+                                                    as libc::c_float,
+                                            (*st).filt_len as libc::c_int,
+                                            quality_map
+                                                [(*st).quality as usize]
+                                                .window_func,
+                                        );
                                     i_0 += 1
                                 }
                                 if (*st).quality > 8i32 {
-                                    (*st).resampler_ptr = Some(resampler_basic_interpolate_double)
+                                    (*st).resampler_ptr = Some(
+                                        resampler_basic_interpolate_double,
+                                    )
                                 } else {
-                                    (*st).resampler_ptr = Some(resampler_basic_interpolate_single)
+                                    (*st).resampler_ptr = Some(
+                                        resampler_basic_interpolate_single,
+                                    )
                                 }
                             }
                             let min_alloc_size: spx_uint32_t = (*st)
@@ -381,15 +432,24 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                 .wrapping_add((*st).buffer_size);
                             if min_alloc_size > (*st).mem_alloc_size {
                                 if (2147483647i32 as libc::c_ulong)
-                                    .wrapping_div(
-                                        ::std::mem::size_of::<spx_word16_t>() as libc::c_ulong
+                                    .wrapping_div(::std::mem::size_of::<
+                                        spx_word16_t,
+                                    >(
                                     )
-                                    .wrapping_div((*st).nb_channels as libc::c_ulong)
+                                        as libc::c_ulong)
+                                    .wrapping_div(
+                                        (*st).nb_channels as libc::c_ulong,
+                                    )
                                     < min_alloc_size as libc::c_ulong
                                 {
                                     current_block = 13465332693182510667;
                                 } else {
-                                    (*st).mem = Vec::with_capacity((*st).nb_channels.wrapping_mul(min_alloc_size) as usize);
+                                    (*st).mem = Vec::with_capacity(
+                                        (*st)
+                                            .nb_channels
+                                            .wrapping_mul(min_alloc_size)
+                                            as usize,
+                                    );
                                     (*st).mem_alloc_size = min_alloc_size;
                                     current_block = 15089075282327824602;
                                 }
@@ -400,65 +460,110 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                 13465332693182510667 => {}
                                 _ => {
                                     if 0 == (*st).started {
-                                        let dim: usize = (*st).nb_channels.wrapping_mul((*st).mem_alloc_size) as usize;
+                                        let dim: usize = (*st)
+                                            .nb_channels
+                                            .wrapping_mul((*st).mem_alloc_size)
+                                            as usize;
                                         for _ in 0..dim {
                                             (*st).mem.push(0.0);
                                         }
                                     } else if (*st).filt_len > old_length {
-                                        let mut i_2: spx_uint32_t = (*st).nb_channels;
+                                        let mut i_2: spx_uint32_t =
+                                            (*st).nb_channels;
                                         loop {
                                             let fresh0 = i_2;
                                             i_2 = i_2.wrapping_sub(1);
                                             if !(0 != fresh0) {
                                                 break;
                                             }
-                                            let olen: spx_uint32_t = old_length.wrapping_add(
-                                                (2i32 as libc::c_uint).wrapping_mul(
-                                                    *(*st).magic_samples.offset(i_2 as isize),
-                                                ),
-                                            );
-                                            let mut j_0: spx_uint32_t = old_length
-                                                .wrapping_sub(1i32 as libc::c_uint)
-                                                .wrapping_add(
-                                                    *(*st).magic_samples.offset(i_2 as isize),
+                                            let olen: spx_uint32_t =
+                                                old_length.wrapping_add(
+                                                    (2i32 as libc::c_uint)
+                                                        .wrapping_mul(
+                                                        *(*st)
+                                                            .magic_samples
+                                                            .offset(
+                                                                i_2 as isize,
+                                                            ),
+                                                    ),
                                                 );
+                                            let mut j_0: spx_uint32_t =
+                                                old_length
+                                                    .wrapping_sub(
+                                                        1i32 as libc::c_uint,
+                                                    )
+                                                    .wrapping_add(
+                                                        *(*st)
+                                                            .magic_samples
+                                                            .offset(
+                                                                i_2 as isize,
+                                                            ),
+                                                    );
                                             loop {
                                                 let fresh1 = j_0;
                                                 j_0 = j_0.wrapping_sub(1);
                                                 if !(0 != fresh1) {
                                                     break;
                                                 }
-                                                println!("{}", i_2.wrapping_mul((*st).mem_alloc_size).wrapping_add(j_0).wrapping_add(*(*st).magic_samples.offset(i_2 as isize)));
-                                                (*st).mem[
-                                                    i_2.wrapping_mul((*st).mem_alloc_size)
-                                                        .wrapping_add(j_0)
-                                                        .wrapping_add(
-                                                            *(*st)
-                                                                .magic_samples
-                                                                .offset(i_2 as isize),
-                                                        )
-                                                        as usize
-                                                ] = (*st).mem[
-                                                    i_2.wrapping_mul(old_alloc_size)
-                                                        .wrapping_add(j_0)
-                                                        as usize
-                                                ];
+                                                println!(
+                                                    "{}",
+                                                    i_2.wrapping_mul(
+                                                        (*st).mem_alloc_size
+                                                    )
+                                                    .wrapping_add(j_0)
+                                                    .wrapping_add(
+                                                        *(*st)
+                                                            .magic_samples
+                                                            .offset(
+                                                                i_2 as isize
+                                                            )
+                                                    )
+                                                );
+                                                (*st).mem[i_2
+                                                    .wrapping_mul(
+                                                        (*st).mem_alloc_size,
+                                                    )
+                                                    .wrapping_add(j_0)
+                                                    .wrapping_add(
+                                                        *(*st)
+                                                            .magic_samples
+                                                            .offset(
+                                                                i_2 as isize,
+                                                            ),
+                                                    )
+                                                    as usize] = (*st).mem[i_2
+                                                    .wrapping_mul(
+                                                        old_alloc_size,
+                                                    )
+                                                    .wrapping_add(j_0)
+                                                    as usize];
                                                 println!("here");
                                             }
                                             j_0 = 0i32 as spx_uint32_t;
-                                            while j_0 < *(*st).magic_samples.offset(i_2 as isize) {
-                                                (*st).mem[
-                                                    i_2.wrapping_mul((*st).mem_alloc_size)
-                                                        .wrapping_add(j_0)
-                                                        as usize
-                                                ] = 0i32 as spx_word16_t;
+                                            while j_0
+                                                < *(*st)
+                                                    .magic_samples
+                                                    .offset(i_2 as isize)
+                                            {
+                                                (*st).mem[i_2
+                                                    .wrapping_mul(
+                                                        (*st).mem_alloc_size,
+                                                    )
+                                                    .wrapping_add(j_0)
+                                                    as usize] =
+                                                    0i32 as spx_word16_t;
                                                 j_0 = j_0.wrapping_add(1)
                                             }
-                                            *(*st).magic_samples.offset(i_2 as isize) =
+                                            *(*st)
+                                                .magic_samples
+                                                .offset(i_2 as isize) =
                                                 0i32 as spx_uint32_t;
                                             if (*st).filt_len > olen {
                                                 j_0 = 0i32 as spx_uint32_t;
-                                                while j_0 < olen.wrapping_sub(1i32 as libc::c_uint)
+                                                while j_0
+                                                    < olen.wrapping_sub(
+                                                        1i32 as libc::c_uint,
+                                                    )
                                                 {
                                                     (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
@@ -486,7 +591,9 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                 while j_0
                                                     < (*st)
                                                         .filt_len
-                                                        .wrapping_sub(1i32 as libc::c_uint)
+                                                        .wrapping_sub(
+                                                        1i32 as libc::c_uint,
+                                                    )
                                                 {
                                                     (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
@@ -502,8 +609,9 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                     ] = 0i32 as spx_word16_t;
                                                     j_0 = j_0.wrapping_add(1)
                                                 }
-                                                let ref mut fresh2 =
-                                                    *(*st).last_sample.offset(i_2 as isize);
+                                                let ref mut fresh2 = *(*st)
+                                                    .last_sample
+                                                    .offset(i_2 as isize);
                                                 *fresh2 = (*fresh2 as libc::c_uint).wrapping_add(
                                                     (*st)
                                                         .filt_len
@@ -513,19 +621,28 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                                     as spx_int32_t
                                                     as spx_int32_t
                                             } else {
-                                                *(*st).magic_samples.offset(i_2 as isize) = olen
-                                                    .wrapping_sub((*st).filt_len)
-                                                    .wrapping_div(2i32 as libc::c_uint);
+                                                *(*st)
+                                                    .magic_samples
+                                                    .offset(i_2 as isize) =
+                                                    olen.wrapping_sub(
+                                                        (*st).filt_len,
+                                                    )
+                                                    .wrapping_div(
+                                                        2i32 as libc::c_uint,
+                                                    );
                                                 j_0 = 0i32 as spx_uint32_t;
-                                                while j_0
-                                                    < (*st)
-                                                        .filt_len
-                                                        .wrapping_sub(1i32 as libc::c_uint)
-                                                        .wrapping_add(
-                                                            *(*st)
-                                                                .magic_samples
-                                                                .offset(i_2 as isize),
-                                                        )
+                                                while j_0 < (*st)
+                                                    .filt_len
+                                                    .wrapping_sub(
+                                                        1i32 as libc::c_uint,
+                                                    )
+                                                    .wrapping_add(
+                                                        *(*st)
+                                                            .magic_samples
+                                                            .offset(
+                                                                i_2 as isize,
+                                                            ),
+                                                    )
                                                 {
                                                     (*st).mem[
                                                         i_2.wrapping_mul((*st).mem_alloc_size)
@@ -549,38 +666,58 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                         let mut i_3: spx_uint32_t = 0;
                                         while i_3 < (*st).nb_channels {
                                             let mut old_magic: spx_uint32_t =
-                                                *(*st).magic_samples.offset(i_3 as isize);
-                                            *(*st).magic_samples.offset(i_3 as isize) = old_length
-                                                .wrapping_sub((*st).filt_len)
-                                                .wrapping_div(2i32 as libc::c_uint);
+                                                *(*st)
+                                                    .magic_samples
+                                                    .offset(i_3 as isize);
+                                            *(*st)
+                                                .magic_samples
+                                                .offset(i_3 as isize) =
+                                                old_length
+                                                    .wrapping_sub(
+                                                        (*st).filt_len,
+                                                    )
+                                                    .wrapping_div(
+                                                        2i32 as libc::c_uint,
+                                                    );
                                             let mut j_1: spx_uint32_t = 0;
                                             while j_1
                                                 < (*st)
                                                     .filt_len
-                                                    .wrapping_sub(1i32 as libc::c_uint)
+                                                    .wrapping_sub(
+                                                        1i32 as libc::c_uint,
+                                                    )
                                                     .wrapping_add(
-                                                        *(*st).magic_samples.offset(i_3 as isize),
+                                                        *(*st)
+                                                            .magic_samples
+                                                            .offset(
+                                                                i_3 as isize,
+                                                            ),
                                                     )
                                                     .wrapping_add(old_magic)
                                             {
-                                                (*st).mem[
-                                                    i_3.wrapping_mul((*st).mem_alloc_size)
-                                                        .wrapping_add(j_1)
-                                                        as usize
-                                                ] = (*st).mem[
-                                                    i_3.wrapping_mul((*st).mem_alloc_size)
-                                                        .wrapping_add(j_1)
-                                                        .wrapping_add(
-                                                            *(*st)
-                                                                .magic_samples
-                                                                .offset(i_3 as isize),
-                                                        )
-                                                        as usize
-                                                ];
+                                                (*st).mem[i_3
+                                                    .wrapping_mul(
+                                                        (*st).mem_alloc_size,
+                                                    )
+                                                    .wrapping_add(j_1)
+                                                    as usize] = (*st).mem[i_3
+                                                    .wrapping_mul(
+                                                        (*st).mem_alloc_size,
+                                                    )
+                                                    .wrapping_add(j_1)
+                                                    .wrapping_add(
+                                                        *(*st)
+                                                            .magic_samples
+                                                            .offset(
+                                                                i_3 as isize,
+                                                            ),
+                                                    )
+                                                    as usize];
                                                 j_1 = j_1.wrapping_add(1)
                                             }
-                                            let ref mut fresh3 =
-                                                *(*st).magic_samples.offset(i_3 as isize);
+                                            let ref mut fresh3 = *(*st)
+                                                .magic_samples
+                                                .offset(i_3 as isize);
                                             *fresh3 = (*fresh3 as libc::c_uint)
                                                 .wrapping_add(old_magic)
                                                 as spx_uint32_t
@@ -588,7 +725,8 @@ unsafe extern "C" fn update_filter(mut st: *mut SpeexResamplerState) -> libc::c_
                                             i_3 = i_3.wrapping_add(1)
                                         }
                                     }
-                                    return RESAMPLER_ERR_SUCCESS as libc::c_int;
+                                    return RESAMPLER_ERR_SUCCESS
+                                        as libc::c_int;
                                 }
                             }
                         }
@@ -611,24 +749,29 @@ unsafe extern "C" fn resampler_basic_zero(
     mut out_len: *mut spx_uint32_t,
 ) -> libc::c_int {
     let mut out_sample: libc::c_int = 0i32;
-    let mut last_sample: libc::c_int = *(*st).last_sample.offset(channel_index as isize);
-    let mut samp_frac_num: spx_uint32_t = *(*st).samp_frac_num.offset(channel_index as isize);
+    let mut last_sample: libc::c_int =
+        *(*st).last_sample.offset(channel_index as isize);
+    let mut samp_frac_num: spx_uint32_t =
+        *(*st).samp_frac_num.offset(channel_index as isize);
     let out_stride: libc::c_int = (*st).out_stride;
     let int_advance: libc::c_int = (*st).int_advance;
     let frac_advance: libc::c_int = (*st).frac_advance;
     let den_rate: spx_uint32_t = (*st).den_rate;
-    while !(last_sample >= *in_len as spx_int32_t || out_sample >= *out_len as spx_int32_t) {
+    while !(last_sample >= *in_len as spx_int32_t
+        || out_sample >= *out_len as spx_int32_t)
+    {
         let fresh4 = out_sample;
         out_sample = out_sample + 1;
         *out.offset((out_stride * fresh4) as isize) = 0i32 as spx_word16_t;
         last_sample += int_advance;
-        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_add(frac_advance as libc::c_uint)
+        samp_frac_num = (samp_frac_num as libc::c_uint)
+            .wrapping_add(frac_advance as libc::c_uint)
             as spx_uint32_t as spx_uint32_t;
         if !(samp_frac_num >= den_rate) {
             continue;
         }
-        samp_frac_num =
-            (samp_frac_num as libc::c_uint).wrapping_sub(den_rate) as spx_uint32_t as spx_uint32_t;
+        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_sub(den_rate)
+            as spx_uint32_t as spx_uint32_t;
         last_sample += 1
     }
     *(*st).last_sample.offset(channel_index as isize) = last_sample;
@@ -652,21 +795,27 @@ unsafe extern "C" fn resampler_basic_interpolate_single(
 ) -> libc::c_int {
     let N: libc::c_int = (*st).filt_len as libc::c_int;
     let mut out_sample: libc::c_int = 0i32;
-    let mut last_sample: libc::c_int = *(*st).last_sample.offset(channel_index as isize);
-    let mut samp_frac_num: spx_uint32_t = *(*st).samp_frac_num.offset(channel_index as isize);
+    let mut last_sample: libc::c_int =
+        *(*st).last_sample.offset(channel_index as isize);
+    let mut samp_frac_num: spx_uint32_t =
+        *(*st).samp_frac_num.offset(channel_index as isize);
     let out_stride: libc::c_int = (*st).out_stride;
     let int_advance: libc::c_int = (*st).int_advance;
     let frac_advance: libc::c_int = (*st).frac_advance;
     let den_rate: spx_uint32_t = (*st).den_rate;
-    while !(last_sample >= *in_len as spx_int32_t || out_sample >= *out_len as spx_int32_t) {
+    while !(last_sample >= *in_len as spx_int32_t
+        || out_sample >= *out_len as spx_int32_t)
+    {
         let mut iptr: *const spx_word16_t =
             &*in_0.offset(last_sample as isize) as *const spx_word16_t;
         let offset: libc::c_int = samp_frac_num
             .wrapping_mul((*st).oversample)
-            .wrapping_div((*st).den_rate) as libc::c_int;
+            .wrapping_div((*st).den_rate)
+            as libc::c_int;
         let frac: spx_word16_t = samp_frac_num
             .wrapping_mul((*st).oversample)
-            .wrapping_rem((*st).den_rate) as libc::c_float
+            .wrapping_rem((*st).den_rate)
+            as libc::c_float
             / (*st).den_rate as libc::c_float;
         let mut interp: [spx_word16_t; 4] = [0.; 4];
         let mut accum: [spx_word32_t; 4] = [
@@ -680,24 +829,36 @@ unsafe extern "C" fn resampler_basic_interpolate_single(
             let curr_in: spx_word16_t = *iptr.offset(j as isize);
             accum[0usize] += curr_in
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     .wrapping_sub(2i32 as libc::c_uint)
                     as usize];
             accum[1usize] += curr_in
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     .wrapping_sub(1i32 as libc::c_uint)
                     as usize];
             accum[2usize] += curr_in
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     as usize];
             accum[3usize] += curr_in
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     .wrapping_add(1i32 as libc::c_uint)
                     as usize];
@@ -713,29 +874,36 @@ unsafe extern "C" fn resampler_basic_interpolate_single(
         out_sample = out_sample + 1;
         *out.offset((out_stride * fresh5) as isize) = sum;
         last_sample += int_advance;
-        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_add(frac_advance as libc::c_uint)
+        samp_frac_num = (samp_frac_num as libc::c_uint)
+            .wrapping_add(frac_advance as libc::c_uint)
             as spx_uint32_t as spx_uint32_t;
         if !(samp_frac_num >= den_rate) {
             continue;
         }
-        samp_frac_num =
-            (samp_frac_num as libc::c_uint).wrapping_sub(den_rate) as spx_uint32_t as spx_uint32_t;
+        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_sub(den_rate)
+            as spx_uint32_t as spx_uint32_t;
         last_sample += 1
     }
     *(*st).last_sample.offset(channel_index as isize) = last_sample;
     *(*st).samp_frac_num.offset(channel_index as isize) = samp_frac_num;
     return out_sample;
 }
-unsafe extern "C" fn cubic_coef(mut frac: spx_word16_t, mut interp: *mut spx_word16_t) -> () {
-    *interp.offset(0isize) =
-        -0.16666999459266663f32 * frac + 0.16666999459266663f32 * frac * frac * frac;
-    *interp.offset(1isize) = frac + 0.5f32 * frac * frac - 0.5f32 * frac * frac * frac;
-    *interp.offset(3isize) = -0.3333300054073334f32 * frac + 0.5f32 * frac * frac
+unsafe extern "C" fn cubic_coef(
+    mut frac: spx_word16_t,
+    mut interp: *mut spx_word16_t,
+) -> () {
+    *interp.offset(0isize) = -0.16666999459266663f32 * frac
+        + 0.16666999459266663f32 * frac * frac * frac;
+    *interp.offset(1isize) =
+        frac + 0.5f32 * frac * frac - 0.5f32 * frac * frac * frac;
+    *interp.offset(3isize) = -0.3333300054073334f32 * frac
+        + 0.5f32 * frac * frac
         - 0.16666999459266663f32 * frac * frac * frac;
     *interp.offset(2isize) = (1.0f64
         - *interp.offset(0isize) as libc::c_double
         - *interp.offset(1isize) as libc::c_double
-        - *interp.offset(3isize) as libc::c_double) as spx_word16_t;
+        - *interp.offset(3isize) as libc::c_double)
+        as spx_word16_t;
 }
 unsafe extern "C" fn resampler_basic_interpolate_double(
     mut st: *mut SpeexResamplerState,
@@ -747,21 +915,27 @@ unsafe extern "C" fn resampler_basic_interpolate_double(
 ) -> libc::c_int {
     let N: libc::c_int = (*st).filt_len as libc::c_int;
     let mut out_sample: libc::c_int = 0i32;
-    let mut last_sample: libc::c_int = *(*st).last_sample.offset(channel_index as isize);
-    let mut samp_frac_num: spx_uint32_t = *(*st).samp_frac_num.offset(channel_index as isize);
+    let mut last_sample: libc::c_int =
+        *(*st).last_sample.offset(channel_index as isize);
+    let mut samp_frac_num: spx_uint32_t =
+        *(*st).samp_frac_num.offset(channel_index as isize);
     let out_stride: libc::c_int = (*st).out_stride;
     let int_advance: libc::c_int = (*st).int_advance;
     let frac_advance: libc::c_int = (*st).frac_advance;
     let den_rate: spx_uint32_t = (*st).den_rate;
-    while !(last_sample >= *in_len as spx_int32_t || out_sample >= *out_len as spx_int32_t) {
+    while !(last_sample >= *in_len as spx_int32_t
+        || out_sample >= *out_len as spx_int32_t)
+    {
         let mut iptr: *const spx_word16_t =
             &*in_0.offset(last_sample as isize) as *const spx_word16_t;
         let offset: libc::c_int = samp_frac_num
             .wrapping_mul((*st).oversample)
-            .wrapping_div((*st).den_rate) as libc::c_int;
+            .wrapping_div((*st).den_rate)
+            as libc::c_int;
         let frac: spx_word16_t = samp_frac_num
             .wrapping_mul((*st).oversample)
-            .wrapping_rem((*st).den_rate) as libc::c_float
+            .wrapping_rem((*st).den_rate)
+            as libc::c_float
             / (*st).den_rate as libc::c_float;
         let mut interp: [spx_word16_t; 4] = [0.; 4];
         let mut accum: [libc::c_double; 4] = [
@@ -772,34 +946,48 @@ unsafe extern "C" fn resampler_basic_interpolate_double(
         ];
         let mut j: libc::c_int = 0;
         while j < N {
-            let curr_in: libc::c_double = *iptr.offset(j as isize) as libc::c_double;
+            let curr_in: libc::c_double =
+                *iptr.offset(j as isize) as libc::c_double;
             accum[0usize] += (curr_in as spx_word32_t
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     .wrapping_sub(2i32 as libc::c_uint)
                     as usize]) as libc::c_double;
             accum[1usize] += (curr_in as spx_word32_t
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     .wrapping_sub(1i32 as libc::c_uint)
                     as usize]) as libc::c_double;
             accum[2usize] += (curr_in as spx_word32_t
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     as usize]) as libc::c_double;
             accum[3usize] += (curr_in as spx_word32_t
                 * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(((j + 1i32) as libc::c_uint).wrapping_mul((*st).oversample))
+                    .wrapping_add(
+                        ((j + 1i32) as libc::c_uint)
+                            .wrapping_mul((*st).oversample),
+                    )
                     .wrapping_sub(offset as libc::c_uint)
                     .wrapping_add(1i32 as libc::c_uint)
                     as usize]) as libc::c_double;
             j += 1
         }
         cubic_coef(frac, interp.as_mut_ptr());
-        let sum: spx_word32_t = (interp[0usize] as libc::c_double * accum[0usize]
+        let sum: spx_word32_t = (interp[0usize] as libc::c_double
+            * accum[0usize]
             + interp[1usize] as libc::c_double * accum[1usize]
             + interp[2usize] as libc::c_double * accum[2usize]
             + interp[3usize] as libc::c_double * accum[3usize])
@@ -808,13 +996,14 @@ unsafe extern "C" fn resampler_basic_interpolate_double(
         out_sample = out_sample + 1;
         *out.offset((out_stride * fresh6) as isize) = sum;
         last_sample += int_advance;
-        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_add(frac_advance as libc::c_uint)
+        samp_frac_num = (samp_frac_num as libc::c_uint)
+            .wrapping_add(frac_advance as libc::c_uint)
             as spx_uint32_t as spx_uint32_t;
         if !(samp_frac_num >= den_rate) {
             continue;
         }
-        samp_frac_num =
-            (samp_frac_num as libc::c_uint).wrapping_sub(den_rate) as spx_uint32_t as spx_uint32_t;
+        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_sub(den_rate)
+            as spx_uint32_t as spx_uint32_t;
         last_sample += 1
     }
     *(*st).last_sample.offset(channel_index as isize) = last_sample;
@@ -1130,10 +1319,12 @@ unsafe extern "C" fn sinc(
     } else if (x as libc::c_double).abs() > 0.5f64 * N as libc::c_double {
         return 0i32 as spx_word16_t;
     } else {
-        return (cutoff as libc::c_double * (3.141592653589793f64 * xx as libc::c_double).sin()
+        return (cutoff as libc::c_double
+            * (3.141592653589793f64 * xx as libc::c_double).sin()
             / (3.141592653589793f64 * xx as libc::c_double)
             * compute_func(
-                (2.0f64 * x as libc::c_double / N as libc::c_double).abs() as libc::c_float,
+                (2.0f64 * x as libc::c_double / N as libc::c_double).abs()
+                    as libc::c_float,
                 window_func,
             )) as spx_word16_t;
     };
@@ -1148,12 +1339,16 @@ unsafe extern "C" fn compute_func(
     let frac: libc::c_float = y - ind as libc::c_float;
     interp[3usize] = -0.1666666667f64 * frac as libc::c_double
         + 0.1666666667f64 * (frac * frac * frac) as libc::c_double;
-    interp[2usize] = frac as libc::c_double + 0.5f64 * (frac * frac) as libc::c_double
+    interp[2usize] = frac as libc::c_double
+        + 0.5f64 * (frac * frac) as libc::c_double
         - 0.5f64 * (frac * frac * frac) as libc::c_double;
     interp[0usize] = -0.3333333333f64 * frac as libc::c_double
         + 0.5f64 * (frac * frac) as libc::c_double
         - 0.1666666667f64 * (frac * frac * frac) as libc::c_double;
-    interp[1usize] = 1.0f32 as libc::c_double - interp[3usize] - interp[2usize] - interp[0usize];
+    interp[1usize] = 1.0f32 as libc::c_double
+        - interp[3usize]
+        - interp[2usize]
+        - interp[0usize];
     return interp[0usize] * *(*func).table.offset(ind as isize)
         + interp[1usize] * *(*func).table.offset((ind + 1i32) as isize)
         + interp[2usize] * *(*func).table.offset((ind + 2i32) as isize)
@@ -1169,15 +1364,19 @@ unsafe extern "C" fn resampler_basic_direct_single(
 ) -> libc::c_int {
     let N: libc::c_int = (*st).filt_len as libc::c_int;
     let mut out_sample: libc::c_int = 0i32;
-    let mut last_sample: libc::c_int = *(*st).last_sample.offset(channel_index as isize);
-    let mut samp_frac_num: spx_uint32_t = *(*st).samp_frac_num.offset(channel_index as isize);
+    let mut last_sample: libc::c_int =
+        *(*st).last_sample.offset(channel_index as isize);
+    let mut samp_frac_num: spx_uint32_t =
+        *(*st).samp_frac_num.offset(channel_index as isize);
     let out_stride: libc::c_int = (*st).out_stride;
     let int_advance: libc::c_int = (*st).int_advance;
     let frac_advance: libc::c_int = (*st).frac_advance;
     let den_rate: spx_uint32_t = (*st).den_rate;
-    while !(last_sample >= *in_len as spx_int32_t || out_sample >= *out_len as spx_int32_t) {
-        let mut sinct: &[spx_word16_t] =
-            &(*st).sinc_table[samp_frac_num.wrapping_mul(N as libc::c_uint) as usize..];
+    while !(last_sample >= *in_len as spx_int32_t
+        || out_sample >= *out_len as spx_int32_t)
+    {
+        let mut sinct: &[spx_word16_t] = &(*st).sinc_table
+            [samp_frac_num.wrapping_mul(N as libc::c_uint) as usize..];
         let mut iptr: *const spx_word16_t =
             &*in_0.offset(last_sample as isize) as *const spx_word16_t;
         let mut sum: spx_word32_t = 0i32 as spx_word32_t;
@@ -1191,13 +1390,14 @@ unsafe extern "C" fn resampler_basic_direct_single(
         out_sample = out_sample + 1;
         *out.offset((out_stride * fresh7) as isize) = sum;
         last_sample += int_advance;
-        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_add(frac_advance as libc::c_uint)
+        samp_frac_num = (samp_frac_num as libc::c_uint)
+            .wrapping_add(frac_advance as libc::c_uint)
             as spx_uint32_t as spx_uint32_t;
         if !(samp_frac_num >= den_rate) {
             continue;
         }
-        samp_frac_num =
-            (samp_frac_num as libc::c_uint).wrapping_sub(den_rate) as spx_uint32_t as spx_uint32_t;
+        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_sub(den_rate)
+            as spx_uint32_t as spx_uint32_t;
         last_sample += 1
     }
     *(*st).last_sample.offset(channel_index as isize) = last_sample;
@@ -1214,15 +1414,19 @@ unsafe extern "C" fn resampler_basic_direct_double(
 ) -> libc::c_int {
     let N: libc::c_int = (*st).filt_len as libc::c_int;
     let mut out_sample: libc::c_int = 0i32;
-    let mut last_sample: libc::c_int = *(*st).last_sample.offset(channel_index as isize);
-    let mut samp_frac_num: spx_uint32_t = *(*st).samp_frac_num.offset(channel_index as isize);
+    let mut last_sample: libc::c_int =
+        *(*st).last_sample.offset(channel_index as isize);
+    let mut samp_frac_num: spx_uint32_t =
+        *(*st).samp_frac_num.offset(channel_index as isize);
     let out_stride: libc::c_int = (*st).out_stride;
     let int_advance: libc::c_int = (*st).int_advance;
     let frac_advance: libc::c_int = (*st).frac_advance;
     let den_rate: spx_uint32_t = (*st).den_rate;
-    while !(last_sample >= *in_len as spx_int32_t || out_sample >= *out_len as spx_int32_t) {
-        let mut sinct: &[spx_word16_t] =
-            &(*st).sinc_table[samp_frac_num.wrapping_mul(N as libc::c_uint) as usize..];
+    while !(last_sample >= *in_len as spx_int32_t
+        || out_sample >= *out_len as spx_int32_t)
+    {
+        let mut sinct: &[spx_word16_t] = &(*st).sinc_table
+            [samp_frac_num.wrapping_mul(N as libc::c_uint) as usize..];
         let mut iptr: *const spx_word16_t =
             &*in_0.offset(last_sample as isize) as *const spx_word16_t;
         let mut accum: [libc::c_double; 4] = [
@@ -1233,27 +1437,33 @@ unsafe extern "C" fn resampler_basic_direct_double(
         ];
         let mut j: libc::c_int = 0i32;
         while j < N {
-            accum[0usize] += (sinct[j as usize] * *iptr.offset(j as isize)) as libc::c_double;
-            accum[1usize] +=
-                (sinct[(j + 1i32) as usize] * *iptr.offset((j + 1i32) as isize)) as libc::c_double;
-            accum[2usize] +=
-                (sinct[(j + 2i32) as usize] * *iptr.offset((j + 2i32) as isize)) as libc::c_double;
-            accum[3usize] +=
-                (sinct[(j + 3i32) as usize] * *iptr.offset((j + 3i32) as isize)) as libc::c_double;
+            accum[0usize] += (sinct[j as usize] * *iptr.offset(j as isize))
+                as libc::c_double;
+            accum[1usize] += (sinct[(j + 1i32) as usize]
+                * *iptr.offset((j + 1i32) as isize))
+                as libc::c_double;
+            accum[2usize] += (sinct[(j + 2i32) as usize]
+                * *iptr.offset((j + 2i32) as isize))
+                as libc::c_double;
+            accum[3usize] += (sinct[(j + 3i32) as usize]
+                * *iptr.offset((j + 3i32) as isize))
+                as libc::c_double;
             j += 4i32
         }
-        let sum: libc::c_double = accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
+        let sum: libc::c_double =
+            accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
         let fresh8 = out_sample;
         out_sample = out_sample + 1;
         *out.offset((out_stride * fresh8) as isize) = sum as spx_word16_t;
         last_sample += int_advance;
-        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_add(frac_advance as libc::c_uint)
+        samp_frac_num = (samp_frac_num as libc::c_uint)
+            .wrapping_add(frac_advance as libc::c_uint)
             as spx_uint32_t as spx_uint32_t;
         if !(samp_frac_num >= den_rate) {
             continue;
         }
-        samp_frac_num =
-            (samp_frac_num as libc::c_uint).wrapping_sub(den_rate) as spx_uint32_t as spx_uint32_t;
+        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_sub(den_rate)
+            as spx_uint32_t as spx_uint32_t;
         last_sample += 1
     }
     *(*st).last_sample.offset(channel_index as isize) = last_sample;
@@ -1272,8 +1482,10 @@ unsafe extern "C" fn _muldiv(
                 b"assertion failed: result\x00",
             ))
             .as_mut_ptr(),
-            (*::std::mem::transmute::<&[u8; 11], &mut [libc::c_char; 11]>(b"resample.c\x00"))
-                .as_mut_ptr(),
+            (*::std::mem::transmute::<&[u8; 11], &mut [libc::c_char; 11]>(
+                b"resample.c\x00",
+            ))
+            .as_mut_ptr(),
             594i32,
         );
     }
@@ -1282,7 +1494,8 @@ unsafe extern "C" fn _muldiv(
     if remainder > 4294967295u32.wrapping_div(mul)
         || major > 4294967295u32.wrapping_div(mul)
         || major.wrapping_mul(mul)
-            > 4294967295u32.wrapping_sub(remainder.wrapping_mul(mul).wrapping_div(div))
+            > 4294967295u32
+                .wrapping_sub(remainder.wrapping_mul(mul).wrapping_div(div))
     {
         return RESAMPLER_ERR_OVERFLOW as libc::c_int;
     } else {
@@ -1343,15 +1556,16 @@ pub unsafe extern "C" fn speex_resampler_set_rate_frac(
         (*st).num_rate = ratio_num;
         (*st).den_rate = ratio_den;
         let fact: spx_uint32_t = _gcd((*st).num_rate, (*st).den_rate);
-        (*st).num_rate =
-            ((*st).num_rate as libc::c_uint).wrapping_div(fact) as spx_uint32_t as spx_uint32_t;
-        (*st).den_rate =
-            ((*st).den_rate as libc::c_uint).wrapping_div(fact) as spx_uint32_t as spx_uint32_t;
+        (*st).num_rate = ((*st).num_rate as libc::c_uint).wrapping_div(fact)
+            as spx_uint32_t as spx_uint32_t;
+        (*st).den_rate = ((*st).den_rate as libc::c_uint).wrapping_div(fact)
+            as spx_uint32_t as spx_uint32_t;
         if old_den > 0i32 as libc::c_uint {
             let mut i: spx_uint32_t = 0u32;
             while i < (*st).nb_channels {
                 if _muldiv(
-                    &mut *(*st).samp_frac_num.offset(i as isize) as *mut spx_uint32_t,
+                    &mut *(*st).samp_frac_num.offset(i as isize)
+                        as *mut spx_uint32_t,
                     *(*st).samp_frac_num.offset(i as isize),
                     (*st).den_rate,
                     old_den,
@@ -1359,7 +1573,9 @@ pub unsafe extern "C" fn speex_resampler_set_rate_frac(
                 {
                     return RESAMPLER_ERR_OVERFLOW as libc::c_int;
                 } else {
-                    if *(*st).samp_frac_num.offset(i as isize) >= (*st).den_rate {
+                    if *(*st).samp_frac_num.offset(i as isize)
+                        >= (*st).den_rate
+                    {
                         *(*st).samp_frac_num.offset(i as isize) =
                             (*st).den_rate.wrapping_sub(1i32 as libc::c_uint)
                     }
@@ -1374,7 +1590,10 @@ pub unsafe extern "C" fn speex_resampler_set_rate_frac(
         }
     };
 }
-unsafe extern "C" fn _gcd(mut a: spx_uint32_t, mut b: spx_uint32_t) -> spx_uint32_t {
+unsafe extern "C" fn _gcd(
+    mut a: spx_uint32_t,
+    mut b: spx_uint32_t,
+) -> spx_uint32_t {
     while b != 0i32 as libc::c_uint {
         let temp: spx_uint32_t = a;
         a = b;
@@ -1432,11 +1651,12 @@ pub unsafe extern "C" fn speex_resampler_process_float(
     let mut j: libc::c_int;
     let mut ilen: spx_uint32_t = *in_len;
     let mut olen: spx_uint32_t = *out_len;
-    let mut x: &mut [spx_word16_t] = &mut(*st)
-        .mem
+    let mut x: &mut [spx_word16_t] = &mut (*st).mem
         [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
-    let filt_offs: libc::c_int = (*st).filt_len.wrapping_sub(1i32 as libc::c_uint) as libc::c_int;
-    let xlen: spx_uint32_t = (*st).mem_alloc_size.wrapping_sub(filt_offs as libc::c_uint);
+    let filt_offs: libc::c_int =
+        (*st).filt_len.wrapping_sub(1i32 as libc::c_uint) as libc::c_int;
+    let xlen: spx_uint32_t =
+        (*st).mem_alloc_size.wrapping_sub(filt_offs as libc::c_uint);
     let istride: libc::c_int = (*st).in_stride;
     if 0 != *(*st).magic_samples.offset(channel_index as isize) {
         olen = (olen as libc::c_uint).wrapping_sub(speex_resampler_magic(
@@ -1448,12 +1668,14 @@ pub unsafe extern "C" fn speex_resampler_process_float(
     }
     if 0 == *(*st).magic_samples.offset(channel_index as isize) {
         while 0 != ilen && 0 != olen {
-            let mut ichunk: spx_uint32_t = if ilen > xlen { xlen } else { ilen };
+            let mut ichunk: spx_uint32_t =
+                if ilen > xlen { xlen } else { ilen };
             let mut ochunk: spx_uint32_t = olen;
             if !in_0.is_null() {
                 j = 0i32;
                 while (j as libc::c_uint) < ichunk {
-                    x[(j + filt_offs) as usize] = *in_0.offset((j * istride) as isize);
+                    x[(j + filt_offs) as usize] =
+                        *in_0.offset((j * istride) as isize);
                     j += 1
                 }
             } else {
@@ -1470,17 +1692,24 @@ pub unsafe extern "C" fn speex_resampler_process_float(
                 out,
                 &mut ochunk as *mut spx_uint32_t,
             );
-            ilen = (ilen as libc::c_uint).wrapping_sub(ichunk) as spx_uint32_t as spx_uint32_t;
-            olen = (olen as libc::c_uint).wrapping_sub(ochunk) as spx_uint32_t as spx_uint32_t;
-            out = out.offset(ochunk.wrapping_mul((*st).out_stride as libc::c_uint) as isize);
+            ilen = (ilen as libc::c_uint).wrapping_sub(ichunk) as spx_uint32_t
+                as spx_uint32_t;
+            olen = (olen as libc::c_uint).wrapping_sub(ochunk) as spx_uint32_t
+                as spx_uint32_t;
+            out = out
+                .offset(ochunk.wrapping_mul((*st).out_stride as libc::c_uint)
+                    as isize);
             if in_0.is_null() {
                 continue;
             }
-            in_0 = in_0.offset(ichunk.wrapping_mul(istride as libc::c_uint) as isize)
+            in_0 = in_0
+                .offset(ichunk.wrapping_mul(istride as libc::c_uint) as isize)
         }
     }
-    *in_len = (*in_len as libc::c_uint).wrapping_sub(ilen) as spx_uint32_t as spx_uint32_t;
-    *out_len = (*out_len as libc::c_uint).wrapping_sub(olen) as spx_uint32_t as spx_uint32_t;
+    *in_len = (*in_len as libc::c_uint).wrapping_sub(ilen) as spx_uint32_t
+        as spx_uint32_t;
+    *out_len = (*out_len as libc::c_uint).wrapping_sub(olen) as spx_uint32_t
+        as spx_uint32_t;
     return if (*st).resampler_ptr == Some(resampler_basic_zero) {
         RESAMPLER_ERR_ALLOC_FAILED as libc::c_int
     } else {
@@ -1495,24 +1724,28 @@ unsafe extern "C" fn speex_resampler_process_native(
     mut out_len: *mut spx_uint32_t,
 ) -> libc::c_int {
     let N: libc::c_int = (*st).filt_len as libc::c_int;
-    let mut mem: &mut[spx_word16_t] = &mut(*st)
-        .mem
+    let mut mem: &mut [spx_word16_t] = &mut (*st).mem
         [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
     (*st).started = 1i32;
-    let out_sample: libc::c_int = (*st).resampler_ptr.expect("non-null function pointer")(
-        st,
-        channel_index,
-        mem.as_ptr(),
-        in_len,
-        out,
-        out_len,
-    );
-    if *(*st).last_sample.offset(channel_index as isize) < *in_len as spx_int32_t {
-        *in_len = *(*st).last_sample.offset(channel_index as isize) as spx_uint32_t
+    let out_sample: libc::c_int =
+        (*st).resampler_ptr.expect("non-null function pointer")(
+            st,
+            channel_index,
+            mem.as_ptr(),
+            in_len,
+            out,
+            out_len,
+        );
+    if *(*st).last_sample.offset(channel_index as isize)
+        < *in_len as spx_int32_t
+    {
+        *in_len =
+            *(*st).last_sample.offset(channel_index as isize) as spx_uint32_t
     }
     *out_len = out_sample as spx_uint32_t;
     let ref mut fresh9 = *(*st).last_sample.offset(channel_index as isize);
-    *fresh9 = (*fresh9 as libc::c_uint).wrapping_sub(*in_len) as spx_int32_t as spx_int32_t;
+    *fresh9 = (*fresh9 as libc::c_uint).wrapping_sub(*in_len) as spx_int32_t
+        as spx_int32_t;
     let ilen: spx_uint32_t = *in_len;
     let mut j: libc::c_int = 0i32;
     while j < N - 1i32 {
@@ -1527,9 +1760,9 @@ unsafe extern "C" fn speex_resampler_magic(
     mut out: *mut *mut spx_word16_t,
     mut out_len: spx_uint32_t,
 ) -> libc::c_int {
-    let mut tmp_in_len: spx_uint32_t = *(*st).magic_samples.offset(channel_index as isize);
-    let mut mem: &mut[spx_word16_t] = &mut(*st)
-        .mem
+    let mut tmp_in_len: spx_uint32_t =
+        *(*st).magic_samples.offset(channel_index as isize);
+    let mut mem: &mut [spx_word16_t] = &mut (*st).mem
         [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
     let N: libc::c_int = (*st).filt_len as libc::c_int;
     speex_resampler_process_native(
@@ -1540,19 +1773,22 @@ unsafe extern "C" fn speex_resampler_magic(
         &mut out_len as *mut spx_uint32_t,
     );
     let ref mut fresh10 = *(*st).magic_samples.offset(channel_index as isize);
-    *fresh10 = (*fresh10 as libc::c_uint).wrapping_sub(tmp_in_len) as spx_uint32_t as spx_uint32_t;
+    *fresh10 = (*fresh10 as libc::c_uint).wrapping_sub(tmp_in_len)
+        as spx_uint32_t as spx_uint32_t;
     if 0 != *(*st).magic_samples.offset(channel_index as isize) {
         let mut i: spx_uint32_t = 0;
         while i < *(*st).magic_samples.offset(channel_index as isize) {
-            mem[((N - 1i32) as libc::c_uint).wrapping_add(i) as usize] = mem[
-                ((N - 1i32) as libc::c_uint)
+            mem[((N - 1i32) as libc::c_uint).wrapping_add(i) as usize] = mem
+                [((N - 1i32) as libc::c_uint)
                     .wrapping_add(i)
-                    .wrapping_add(tmp_in_len) as usize
-            ];
+                    .wrapping_add(tmp_in_len) as usize];
             i = i.wrapping_add(1)
         }
     }
-    *out = (*out).offset(out_len.wrapping_mul((*st).out_stride as libc::c_uint) as isize);
+    *out =
+        (*out)
+            .offset(out_len.wrapping_mul((*st).out_stride as libc::c_uint)
+                as isize);
     return out_len as libc::c_int;
 }
 /* * Resample an int array. The input and output buffers must *not* overlap.
@@ -1579,8 +1815,7 @@ pub unsafe extern "C" fn speex_resampler_process_int(
     let ostride_save: libc::c_int = (*st).out_stride;
     let mut ilen: spx_uint32_t = *in_len;
     let mut olen: spx_uint32_t = *out_len;
-    let mut x: &mut[spx_word16_t] = &mut(*st)
-        .mem
+    let mut x: &mut [spx_word16_t] = &mut (*st).mem
         [channel_index.wrapping_mul((*st).mem_alloc_size) as usize..];
     let xlen: spx_uint32_t = (*st)
         .mem_alloc_size
@@ -1599,31 +1834,35 @@ pub unsafe extern "C" fn speex_resampler_process_int(
         let mut ochunk: spx_uint32_t = if olen > ylen { ylen } else { olen };
         let mut omagic: spx_uint32_t = 0i32 as spx_uint32_t;
         if 0 != *(*st).magic_samples.offset(channel_index as isize) {
-            omagic =
-                speex_resampler_magic(st, channel_index, &mut y as *mut *mut spx_word16_t, ochunk)
-                    as spx_uint32_t;
-            ochunk = (ochunk as libc::c_uint).wrapping_sub(omagic) as spx_uint32_t as spx_uint32_t;
-            olen = (olen as libc::c_uint).wrapping_sub(omagic) as spx_uint32_t as spx_uint32_t
+            omagic = speex_resampler_magic(
+                st,
+                channel_index,
+                &mut y as *mut *mut spx_word16_t,
+                ochunk,
+            ) as spx_uint32_t;
+            ochunk = (ochunk as libc::c_uint).wrapping_sub(omagic)
+                as spx_uint32_t as spx_uint32_t;
+            olen = (olen as libc::c_uint).wrapping_sub(omagic) as spx_uint32_t
+                as spx_uint32_t
         }
         if 0 == *(*st).magic_samples.offset(channel_index as isize) {
             if !in_0.is_null() {
                 j = 0i32;
                 while (j as libc::c_uint) < ichunk {
-                    x[
-                        (j as libc::c_uint)
-                            .wrapping_add((*st).filt_len)
-                            .wrapping_sub(1i32 as libc::c_uint) as usize
-                    ] = *in_0.offset((j * istride_save) as isize) as spx_word16_t;
+                    x[(j as libc::c_uint)
+                        .wrapping_add((*st).filt_len)
+                        .wrapping_sub(1i32 as libc::c_uint)
+                        as usize] = *in_0.offset((j * istride_save) as isize)
+                        as spx_word16_t;
                     j += 1
                 }
             } else {
                 j = 0i32;
                 while (j as libc::c_uint) < ichunk {
-                    x[
-                        (j as libc::c_uint)
-                            .wrapping_add((*st).filt_len)
-                            .wrapping_sub(1i32 as libc::c_uint) as usize
-                    ] = 0i32 as spx_word16_t;
+                    x[(j as libc::c_uint)
+                        .wrapping_add((*st).filt_len)
+                        .wrapping_sub(1i32 as libc::c_uint)
+                        as usize] = 0i32 as spx_word16_t;
                     j += 1
                 }
             }
@@ -1643,29 +1882,39 @@ pub unsafe extern "C" fn speex_resampler_process_int(
             *out.offset((j * ostride_save) as isize) =
                 (if *ystack.as_mut_ptr().offset(j as isize) < -32767.5f32 {
                     -32768i32
-                } else if *ystack.as_mut_ptr().offset(j as isize) > 32766.5f32 {
+                } else if *ystack.as_mut_ptr().offset(j as isize) > 32766.5f32
+                {
                     32767i32
                 } else {
-                    (0.5f64 + *ystack.as_mut_ptr().offset(j as isize) as libc::c_double).floor()
-                        as spx_int16_t as libc::c_int
+                    (0.5f64
+                        + *ystack.as_mut_ptr().offset(j as isize)
+                            as libc::c_double)
+                        .floor() as spx_int16_t
+                        as libc::c_int
                 }) as spx_int16_t;
             j += 1
         }
-        ilen = (ilen as libc::c_uint).wrapping_sub(ichunk) as spx_uint32_t as spx_uint32_t;
-        olen = (olen as libc::c_uint).wrapping_sub(ochunk) as spx_uint32_t as spx_uint32_t;
+        ilen = (ilen as libc::c_uint).wrapping_sub(ichunk) as spx_uint32_t
+            as spx_uint32_t;
+        olen = (olen as libc::c_uint).wrapping_sub(ochunk) as spx_uint32_t
+            as spx_uint32_t;
         out = out.offset(
             ochunk
                 .wrapping_add(omagic)
-                .wrapping_mul(ostride_save as libc::c_uint) as isize,
+                .wrapping_mul(ostride_save as libc::c_uint)
+                as isize,
         );
         if in_0.is_null() {
             continue;
         }
-        in_0 = in_0.offset(ichunk.wrapping_mul(istride_save as libc::c_uint) as isize)
+        in_0 = in_0
+            .offset(ichunk.wrapping_mul(istride_save as libc::c_uint) as isize)
     }
     (*st).out_stride = ostride_save;
-    *in_len = (*in_len as libc::c_uint).wrapping_sub(ilen) as spx_uint32_t as spx_uint32_t;
-    *out_len = (*out_len as libc::c_uint).wrapping_sub(olen) as spx_uint32_t as spx_uint32_t;
+    *in_len = (*in_len as libc::c_uint).wrapping_sub(ilen) as spx_uint32_t
+        as spx_uint32_t;
+    *out_len = (*out_len as libc::c_uint).wrapping_sub(olen) as spx_uint32_t
+        as spx_uint32_t;
     return if (*st).resampler_ptr == Some(resampler_basic_zero) {
         RESAMPLER_ERR_ALLOC_FAILED as libc::c_int
     } else {
@@ -1797,7 +2046,9 @@ pub unsafe extern "C" fn speex_resampler_set_rate(
     mut in_rate: spx_uint32_t,
     mut out_rate: spx_uint32_t,
 ) -> libc::c_int {
-    return speex_resampler_set_rate_frac(st, in_rate, out_rate, in_rate, out_rate);
+    return speex_resampler_set_rate_frac(
+        st, in_rate, out_rate, in_rate, out_rate,
+    );
 }
 /* * Get the current input/output sampling rates (integer value).
  * @param st Resampler state
@@ -1941,7 +2192,12 @@ pub unsafe extern "C" fn speex_resampler_reset_mem(
         *(*st).samp_frac_num.offset(i as isize) = 0i32 as spx_uint32_t;
         i = i.wrapping_add(1)
     }
-    (*st).mem = vec![0.0; (*st).nb_channels
-            .wrapping_mul((*st).filt_len.wrapping_sub(1i32 as libc::c_uint)) as usize];
+    (*st).mem = vec![
+        0.0;
+        (*st)
+            .nb_channels
+            .wrapping_mul((*st).filt_len.wrapping_sub(1i32 as libc::c_uint))
+            as usize
+    ];
     return RESAMPLER_ERR_SUCCESS as libc::c_int;
 }

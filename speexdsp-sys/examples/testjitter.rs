@@ -44,17 +44,12 @@ fn jitter_fill(jb: *mut JitterBuffer) {
     for i in 0..100 {
         synth_in(&mut input, i, 1);
         unsafe {
-            jitter_buffer_put(jb, &input as *const JitterBufferPacket);
+            jitter_buffer_put(jb, &input);
         }
 
         output.len = 65536;
         let err = unsafe {
-            jitter_buffer_get(
-                jb,
-                &mut output as *mut JitterBufferPacket,
-                10,
-                ptr::null_mut::<i32>(),
-            )
+            jitter_buffer_get(jb, &mut output, 10, ptr::null_mut::<i32>())
         };
         if err != (JITTER_BUFFER_OK as i32) {
             eprintln!("Fill test failed iteration {}", i);
@@ -82,28 +77,18 @@ fn main() {
     for _ in 0..100 {
         output.len = 65536;
         unsafe {
-            jitter_buffer_get(
-                jb,
-                &mut output as *mut JitterBufferPacket,
-                10,
-                ptr::null_mut::<i32>(),
-            );
+            jitter_buffer_get(jb, &mut output, 10, ptr::null_mut::<i32>());
             jitter_buffer_tick(jb);
         }
     }
 
     synth_in(&mut input, 100, 1);
     unsafe {
-        jitter_buffer_put(jb, &input as *const JitterBufferPacket);
+        jitter_buffer_put(jb, &input);
     }
     output.len = 65536;
     let err = unsafe {
-        jitter_buffer_get(
-            jb,
-            &mut output as *mut JitterBufferPacket,
-            10,
-            ptr::null_mut::<i32>(),
-        )
+        jitter_buffer_get(jb, &mut output, 10, ptr::null_mut::<i32>())
     };
     if err != (JITTER_BUFFER_OK as i32) {
         eprintln!("Failed frozen sender resynchronize");

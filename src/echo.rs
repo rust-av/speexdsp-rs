@@ -36,8 +36,13 @@ mod sys {
     }
 
     impl SpeexEcho {
-        pub fn new(frame_size: usize, filter_length: usize) -> Result<Self, Error> {
-            let st = unsafe { speex_echo_state_init(frame_size as i32, filter_length as i32) };
+        pub fn new(
+            frame_size: usize,
+            filter_length: usize,
+        ) -> Result<Self, Error> {
+            let st = unsafe {
+                speex_echo_state_init(frame_size as i32, filter_length as i32)
+            };
 
             if st.is_null() {
                 Err(Error::FailedInit)
@@ -68,9 +73,19 @@ mod sys {
             }
         }
 
-        pub fn echo_cancellation(&mut self, rec: &[i16], play: &[i16], out: &mut [i16]) {
+        pub fn echo_cancellation(
+            &mut self,
+            rec: &[i16],
+            play: &[i16],
+            out: &mut [i16],
+        ) {
             unsafe {
-                speex_echo_cancellation(self.st, rec.as_ptr(), play.as_ptr(), out.as_mut_ptr())
+                speex_echo_cancellation(
+                    self.st,
+                    rec.as_ptr(),
+                    play.as_ptr(),
+                    out.as_mut_ptr(),
+                )
             };
         }
 
@@ -93,7 +108,9 @@ mod sys {
         }
 
         pub fn echo_capture(&mut self, rec: &[i16], out: &mut [i16]) {
-            unsafe { speex_echo_capture(self.st, rec.as_ptr(), out.as_mut_ptr()) };
+            unsafe {
+                speex_echo_capture(self.st, rec.as_ptr(), out.as_mut_ptr())
+            };
         }
 
         pub fn echo_playback(&mut self, play: &[i16]) {
@@ -104,9 +121,15 @@ mod sys {
             unsafe { speex_echo_state_reset(self.st) };
         }
 
-        pub fn echo_ctl(&mut self, request: SpeexEchoConst, ptr: usize) -> Result<(), Error> {
-            let ret =
-                unsafe { speex_echo_ctl(self.st, request as i32, ptr as *mut c_void) as usize };
+        pub fn echo_ctl(
+            &mut self,
+            request: SpeexEchoConst,
+            ptr: usize,
+        ) -> Result<(), Error> {
+            let ret = unsafe {
+                speex_echo_ctl(self.st, request as i32, ptr as *mut c_void)
+                    as usize
+            };
             if ret != 0 {
                 Err(Error::UnknownRequest)
             } else {
@@ -130,9 +153,18 @@ mod sys {
     }
 
     impl SpeexDecorr {
-        pub fn new(rate: usize, channels: usize, frame_size: usize) -> Result<Self, Error> {
-            let st =
-                unsafe { speex_decorrelate_new(rate as i32, channels as i32, frame_size as i32) };
+        pub fn new(
+            rate: usize,
+            channels: usize,
+            frame_size: usize,
+        ) -> Result<Self, Error> {
+            let st = unsafe {
+                speex_decorrelate_new(
+                    rate as i32,
+                    channels as i32,
+                    frame_size as i32,
+                )
+            };
 
             if st.is_null() {
                 Err(Error::FailedInit)
@@ -141,9 +173,19 @@ mod sys {
             }
         }
 
-        pub fn decorrelate(&mut self, input: &[i16], out: &mut [i16], strength: usize) {
+        pub fn decorrelate(
+            &mut self,
+            input: &[i16],
+            out: &mut [i16],
+            strength: usize,
+        ) {
             unsafe {
-                speex_decorrelate(self.st, input.as_ptr(), out.as_mut_ptr(), strength as i32)
+                speex_decorrelate(
+                    self.st,
+                    input.as_ptr(),
+                    out.as_mut_ptr(),
+                    strength as i32,
+                )
             };
         }
     }

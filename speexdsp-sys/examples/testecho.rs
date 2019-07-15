@@ -71,7 +71,12 @@ fn main() -> std::io::Result<()> {
         BigEndian::read_i16_into(&echo_read_buf, &mut echo_buf);
         BigEndian::read_i16_into(&ref_read_buf, &mut ref_buf);
         unsafe {
-            speex_echo_cancellation(st, ref_buf.as_ptr(), echo_buf.as_ptr(), e_buf.as_mut_ptr())
+            speex_echo_cancellation(
+                st,
+                ref_buf.as_ptr(),
+                echo_buf.as_ptr(),
+                e_buf.as_mut_ptr(),
+            )
         };
         unsafe { speex_preprocess_run(den, e_buf.as_mut_ptr()) };
         BigEndian::write_i16_into(&e_buf, &mut ref_read_buf);

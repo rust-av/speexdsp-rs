@@ -39,7 +39,11 @@ fn jitter_fill(jb: &mut SpeexJitter) {
             eprintln!("Fill test failed iteration {}", i);
         }
         if output.timestamp() != i * 10 {
-            println!("Fill test expected {} got {}", i * 10, output.timestamp());
+            println!(
+                "Fill test expected {} got {}",
+                i * 10,
+                output.timestamp()
+            );
         }
         jb.buffer_tick();
     }
