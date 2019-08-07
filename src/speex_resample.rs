@@ -2,6 +2,7 @@
 ( dead_code , mutable_transmutes , non_camel_case_types , non_snake_case ,
 non_upper_case_globals , unused_mut )]
 use libc::*;
+use std::slice;
 use std::vec::Vec;
 
 pub type unnamed = libc::c_uint;
@@ -792,101 +793,53 @@ unsafe extern "C" fn resampler_basic_interpolate_single(
     mut in_len: *mut spx_uint32_t,
     mut out: *mut spx_word16_t,
     mut out_len: *mut spx_uint32_t,
-) -> libc::c_int {
-    let N: libc::c_int = (*st).filt_len as libc::c_int;
-    let mut out_sample: libc::c_int = 0i32;
-    let mut last_sample: libc::c_int =
-        *(*st).last_sample.offset(channel_index as isize);
-    let mut samp_frac_num: spx_uint32_t =
-        *(*st).samp_frac_num.offset(channel_index as isize);
-    let out_stride: libc::c_int = (*st).out_stride;
-    let int_advance: libc::c_int = (*st).int_advance;
-    let frac_advance: libc::c_int = (*st).frac_advance;
-    let den_rate: spx_uint32_t = (*st).den_rate;
-    while !(last_sample >= *in_len as spx_int32_t
-        || out_sample >= *out_len as spx_int32_t)
+) -> i32 {
+    let N = unsafe { (*st).filt_len as usize };
+    let mut last_sample = unsafe { *(*st).last_sample.offset(channel_index as isize) };
+    let mut samp_frac_num = unsafe { *(*st).samp_frac_num.offset(channel_index as isize) };
+    let out_stride = unsafe { (*st).out_stride };
+    let int_advance = unsafe { (*st).int_advance };
+    let frac_advance = unsafe { (*st).frac_advance };
+    let den_rate = unsafe { (*st).den_rate };
+    let oversample = unsafe { (*st).oversample };
+    let sinc_table = unsafe { &(*st).sinc_table };
+    let input = unsafe { slice::from_raw_parts(in_0, *in_len as usize) };
+    let output = unsafe { slice::from_raw_parts_mut(out, *out_len as usize) };
+
+    let mut out_sample = 0;
+
+    while !(last_sample >= input.len() as i32 || out_sample >= output.len() as i32)
     {
-        let mut iptr: *const spx_word16_t =
-            &*in_0.offset(last_sample as isize) as *const spx_word16_t;
-        let offset: libc::c_int = samp_frac_num
-            .wrapping_mul((*st).oversample)
-            .wrapping_div((*st).den_rate)
-            as libc::c_int;
-        let frac: spx_word16_t = samp_frac_num
-            .wrapping_mul((*st).oversample)
-            .wrapping_rem((*st).den_rate)
-            as libc::c_float
-            / (*st).den_rate as libc::c_float;
+        let mut iptr = unsafe { slice::from_raw_parts(&input[last_sample as usize], N) };
+        let offset = samp_frac_num * oversample / den_rate;
+        let frac: spx_word16_t = ((samp_frac_num * oversample) % den_rate) as spx_word16_t / den_rate as spx_word16_t;
+        let mut accum: [spx_word32_t; 4] = [0.; 4];
+        iptr.iter().zip(0..N).for_each(|(&curr_in, j)| {
+            let idx = (2 + ((j as u32 + 1) * oversample) - offset) as usize;
+            accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(|(v, &s)| {
+                *v += curr_in * s;
+            });
+        });
         let mut interp: [spx_word16_t; 4] = [0.; 4];
-        let mut accum: [spx_word32_t; 4] = [
-            0i32 as spx_word32_t,
-            0i32 as spx_word32_t,
-            0i32 as spx_word32_t,
-            0i32 as spx_word32_t,
-        ];
-        let mut j: libc::c_int = 0;
-        while j < N {
-            let curr_in: spx_word16_t = *iptr.offset(j as isize);
-            accum[0usize] += curr_in
-                * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(
-                        ((j + 1i32) as libc::c_uint)
-                            .wrapping_mul((*st).oversample),
-                    )
-                    .wrapping_sub(offset as libc::c_uint)
-                    .wrapping_sub(2i32 as libc::c_uint)
-                    as usize];
-            accum[1usize] += curr_in
-                * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(
-                        ((j + 1i32) as libc::c_uint)
-                            .wrapping_mul((*st).oversample),
-                    )
-                    .wrapping_sub(offset as libc::c_uint)
-                    .wrapping_sub(1i32 as libc::c_uint)
-                    as usize];
-            accum[2usize] += curr_in
-                * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(
-                        ((j + 1i32) as libc::c_uint)
-                            .wrapping_mul((*st).oversample),
-                    )
-                    .wrapping_sub(offset as libc::c_uint)
-                    as usize];
-            accum[3usize] += curr_in
-                * (*st).sinc_table[(4i32 as libc::c_uint)
-                    .wrapping_add(
-                        ((j + 1i32) as libc::c_uint)
-                            .wrapping_mul((*st).oversample),
-                    )
-                    .wrapping_sub(offset as libc::c_uint)
-                    .wrapping_add(1i32 as libc::c_uint)
-                    as usize];
-            j += 1
-        }
         cubic_coef(frac, interp.as_mut_ptr());
-        let mut sum: spx_word32_t = interp[0usize] * accum[0usize]
-            + interp[1usize] * accum[1usize]
-            + interp[2usize] * accum[2usize]
-            + interp[3usize] * accum[3usize];
-        sum = sum;
-        let fresh5 = out_sample;
-        out_sample = out_sample + 1;
-        *out.offset((out_stride * fresh5) as isize) = sum;
+        output[(out_stride * out_sample) as usize] = interp.iter()
+            .zip(accum.iter())
+            .map(|(&x, &y)| x * y)
+            .fold(0., |acc, x| acc + x);
+        out_sample += 1;
         last_sample += int_advance;
-        samp_frac_num = (samp_frac_num as libc::c_uint)
-            .wrapping_add(frac_advance as libc::c_uint)
-            as spx_uint32_t as spx_uint32_t;
-        if !(samp_frac_num >= den_rate) {
-            continue;
+        samp_frac_num += frac_advance as u32;
+        if samp_frac_num >= den_rate {
+            samp_frac_num -= den_rate;
+            last_sample += 1
         }
-        samp_frac_num = (samp_frac_num as libc::c_uint).wrapping_sub(den_rate)
-            as spx_uint32_t as spx_uint32_t;
-        last_sample += 1
     }
-    *(*st).last_sample.offset(channel_index as isize) = last_sample;
-    *(*st).samp_frac_num.offset(channel_index as isize) = samp_frac_num;
-    return out_sample;
+
+    unsafe {
+        *(*st).last_sample.offset(channel_index as isize) = last_sample;
+        *(*st).samp_frac_num.offset(channel_index as isize) = samp_frac_num;
+    }
+    out_sample
 }
 unsafe extern "C" fn cubic_coef(
     mut frac: spx_word16_t,
