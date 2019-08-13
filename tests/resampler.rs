@@ -36778,7 +36778,8 @@ fn resampling(quality: usize) {
     let mut fout_native = vec![0f32; INBLOCK * 8];
 
     let mut st = State::new(1, RATE, RATE, 4).unwrap();
-    let mut st_native = native::State::new(1, RATE, RATE, 4).unwrap();
+
+    let mut st_native = native::State::new(1, RATE, RATE, 4);
 
     st.set_rate(RATE, rate);
     st.skip_zeros();
@@ -36788,22 +36789,20 @@ fn resampling(quality: usize) {
     st_native.set_rate(RATE, rate);
     st_native.skip_zeros();
 
-    st_native.set_quality(quality).unwrap();
+    st_native.set_quality(quality);
 
     for &_ref_out in REFERENCE {
         let in_len = avail as usize;
         let out_len = (in_len * rate + RATE - 1) / RATE;
-
         let prev_in_len = in_len;
         let prev_out_len = out_len;
 
-        let (in_len_native, out_len_native) = st_native
-            .process_float(
-                0,
-                &fin[off..off + in_len],
-                &mut fout_native[..out_len],
-            )
-            .unwrap();
+        let (in_len_native, out_len_native) = st_native.process_float(
+            0,
+            &fin[off..off + in_len],
+            &mut fout_native[..out_len],
+        );
+
         let (in_len, out_len) = st
             .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
             .unwrap();
