@@ -150,7 +150,11 @@ mod sys {
                     SpeexPreprocessConst::SPEEX_PREPROCESS_SET_ECHO_STATE,
                     Variant::Echo(val),
                 ) => val.get_ptr() as *mut c_void,
-                (_, Variant::U32(val)) => val as *mut c_void,
+                (_, Variant::U32(val)) => {
+                    let val_ref = &val;
+                    let ptr = val_ref as *const u32;
+                    ptr as *mut c_void
+                }
                 _ => panic!("This type is not accepted"),
             };
             let ret = unsafe {
