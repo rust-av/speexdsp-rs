@@ -1,5 +1,9 @@
+extern crate assert_approx_eq;
+extern crate interpolate_name;
 extern crate speexdsp;
 
+use assert_approx_eq::assert_approx_eq;
+use interpolate_name::interpolate_test;
 use speexdsp::resampler::*;
 use std::f32::consts::PI;
 
@@ -36759,9 +36763,10 @@ const PERIOD: f32 = 32f32;
 const INBLOCK: usize = 1024;
 const RATE: usize = 48000;
 
-#[test]
 #[cfg(feature = "sys")]
-fn resampling() {
+#[interpolate_test(8, 8)]
+#[interpolate_test(10, 10)]
+fn resampling(quality: usize) {
     let mut rate = 1000;
     let mut off = 0;
     let mut avail = INBLOCK as isize;
@@ -36778,12 +36783,12 @@ fn resampling() {
     st.set_rate(RATE, rate);
     st.skip_zeros();
 
-    st.set_quality(10).unwrap();
+    st.set_quality(quality).unwrap();
 
     st_native.set_rate(RATE, rate);
     st_native.skip_zeros();
 
-    st_native.set_quality(10).unwrap();
+    st_native.set_quality(quality).unwrap();
 
     for &_ref_out in REFERENCE {
         let in_len = avail as usize;
@@ -36818,10 +36823,15 @@ fn resampling() {
             off -= INBLOCK;
         }
 
-        assert_eq!(
-            &fout[..out_len as usize],
-            &fout_native[..out_len as usize]
-        );
+        let fout_s = &fout[..out_len as usize];
+        let fout_native_s = &fout_native[..out_len as usize];
+
+        fout_s
+            .iter()
+            .zip(fout_native_s.iter())
+            .for_each(|(&x, &y)| {
+                assert_approx_eq!(x, y, 1.0e-6);
+            });
 
         rate += 5000;
         if rate > 128000 {
@@ -36832,50 +36842,3 @@ fn resampling() {
         st_native.set_rate(RATE, rate);
     }
 }
-
-/*
-#[test]
-fn resampling() {
-    let mut rate = 1000;
-    let mut off = 0;
-    let mut avail = INBLOCK as isize;
-
-    let fin : Vec<f32> = (0 .. INBLOCK * 4).map(|i| ((i as f32) / PERIOD * 2.0 * PI).sin() * 0.9).collect();
-    let mut fout = vec![0f32; INBLOCK * 8];
-
-    let mut st = State::new(1, RATE, RATE, 4).unwrap();
-
-    st.set_rate(RATE, rate);
-    st.skip_zeros();
-
-    st.set_quality(10).unwrap();
-
-    for &ref_out in REFERENCE {
-        let in_len = avail as usize;
-        let out_len = (in_len * rate + RATE - 1) / RATE;
-
-        let prev_in_len = in_len;
-        let prev_out_len = out_len;
-
-        let (in_len, out_len) = st.process_float(0, &fin[off .. off + in_len], &mut fout[..out_len]).unwrap();
-
-        eprintln!("{} {} {} {} -> {} {}", rate, off, prev_in_len, prev_out_len, in_len, out_len);
-
-        off += in_len as usize;
-        avail += INBLOCK as isize - in_len as isize;
-
-        if off >= INBLOCK {
-            off -= INBLOCK;
-        }
-
-        assert_eq!(&fout[..out_len as usize], ref_out);
-
-        rate += 5000;
-        if rate > 128000 {
-            break;
-        }
-
-        st.set_rate(RATE, rate);
-    }
-}
-*/
