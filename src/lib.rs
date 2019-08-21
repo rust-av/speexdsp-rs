@@ -6,4 +6,4 @@ pub mod jitter;
 pub mod preprocess;
 pub mod resampler;
 
-mod speex_resample;
+pub mod speex_resample;
