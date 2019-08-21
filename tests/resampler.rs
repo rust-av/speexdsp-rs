@@ -2,11 +2,7 @@ extern crate assert_approx_eq;
 extern crate interpolate_name;
 extern crate speexdsp;
 
-use assert_approx_eq::assert_approx_eq;
-use interpolate_name::interpolate_test;
-use speexdsp::resampler::*;
-use std::f32::consts::PI;
-
+#[cfg(feature = "sys")]
 static REFERENCE: &[&[f32]] = &[
     &[],
     &[
@@ -36759,85 +36755,118 @@ static REFERENCE: &[&[f32]] = &[
     ],
 ];
 
-const PERIOD: f32 = 32f32;
-const INBLOCK: usize = 1024;
-const RATE: usize = 48000;
-
 #[cfg(feature = "sys")]
-#[interpolate_test(8, 8)]
-#[interpolate_test(10, 10)]
-fn resampling(quality: usize) {
-    let mut rate = 1000;
-    let mut off = 0;
-    let mut avail = INBLOCK as isize;
+#[cfg(test)]
+mod tests {
+    use assert_approx_eq::assert_approx_eq;
+    use interpolate_name::interpolate_test;
 
-    let fin: Vec<f32> = (0..INBLOCK * 4)
-        .map(|i| ((i as f32) / PERIOD * 2.0 * PI).sin() * 0.9)
-        .collect();
-    let mut fout = vec![0f32; INBLOCK * 8];
-    let mut fout_native = vec![0f32; INBLOCK * 8];
+    use speexdsp::resampler::*;
+    use speexdsp::speex_resample::*;
 
-    let mut st = State::new(1, RATE, RATE, 4).unwrap();
+    use std::f32::consts::PI;
 
-    let mut st_native = native::State::new(1, RATE, RATE, 4);
+    const PERIOD: f32 = 32f32;
+    const INBLOCK: usize = 1024;
+    const RATE: usize = 48000;
 
-    st.set_rate(RATE, rate);
-    st.skip_zeros();
-
-    st.set_quality(quality).unwrap();
-
-    st_native.set_rate(RATE, rate);
-    st_native.skip_zeros();
-
-    st_native.set_quality(quality);
-
-    for &_ref_out in REFERENCE {
-        let in_len = avail as usize;
-        let out_len = (in_len * rate + RATE - 1) / RATE;
-        let prev_in_len = in_len;
-        let prev_out_len = out_len;
-
-        let (in_len_native, out_len_native) = st_native.process_float(
-            0,
-            &fin[off..off + in_len],
-            &mut fout_native[..out_len],
+    #[inline(always)]
+    fn process_float_native(
+        st: &mut SpeexResamplerState,
+        index: usize,
+        input: &[f32],
+        output: &mut [f32],
+    ) -> (usize, usize) {
+        let mut in_len = input.len() as u32;
+        let mut out_len = output.len() as u32;
+        st.process_float(
+            index as u32,
+            input,
+            &mut in_len,
+            output,
+            &mut out_len,
         );
 
-        let (in_len, out_len) = st
-            .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
-            .unwrap();
+        (in_len as usize, out_len as usize)
+    }
 
-        eprintln!(
-            "{} {} {} {} -> {} {}",
-            rate, off, prev_in_len, prev_out_len, in_len, out_len
-        );
 
-        assert_eq!(in_len, in_len_native);
-        assert_eq!(out_len, out_len_native);
+    #[interpolate_test(8, 8)]
+    #[interpolate_test(10, 10)]
+    fn resampling(quality: usize) {
+        let mut rate = 1000;
+        let mut off = 0;
+        let mut avail = INBLOCK as isize;
 
-        off += in_len as usize;
-        avail += INBLOCK as isize - in_len as isize;
+        let fin: Vec<f32> = (0..INBLOCK * 4)
+            .map(|i| ((i as f32) / PERIOD * 2.0 * PI).sin() * 0.9)
+            .collect();
+        let mut fout = vec![0f32; INBLOCK * 8];
+        let mut fout_native = vec![0f32; INBLOCK * 8];
 
-        if off >= INBLOCK {
-            off -= INBLOCK;
-        }
+        let mut st = State::new(1, RATE, RATE, 4).unwrap();
 
-        let fout_s = &fout[..out_len as usize];
-        let fout_native_s = &fout_native[..out_len as usize];
-
-        fout_s
-            .iter()
-            .zip(fout_native_s.iter())
-            .for_each(|(&x, &y)| {
-                assert_approx_eq!(x, y, 1.0e-6);
-            });
-
-        rate += 5000;
-        if rate > 128000 {
-            break;
-        }
+        let mut st_native = SpeexResamplerState::new(1, RATE, RATE, 4);
 
         st.set_rate(RATE, rate);
+        st.skip_zeros();
+
+        st.set_quality(quality).unwrap();
+
         st_native.set_rate(RATE, rate);
+        st_native.skip_zeros();
+
+        st_native.set_quality(quality);
+
+        for &_ref_out in super::REFERENCE {
+            let in_len = avail as usize;
+            let out_len = (in_len * rate + RATE - 1) / RATE;
+            let prev_in_len = in_len;
+            let prev_out_len = out_len;
+
+            let (in_len_native, out_len_native) = process_float_native(
+                &mut st_native,
+                0,
+                &fin[off..off + in_len],
+                &mut fout_native[..out_len],
+            );
+
+            let (in_len, out_len) = st
+                .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
+                .unwrap();
+
+            eprintln!(
+                "{} {} {} {} -> {} {}",
+                rate, off, prev_in_len, prev_out_len, in_len, out_len
+            );
+
+            assert_eq!(in_len, in_len_native);
+            assert_eq!(out_len, out_len_native);
+
+            off += in_len as usize;
+            avail += INBLOCK as isize - in_len as isize;
+
+            if off >= INBLOCK {
+                off -= INBLOCK;
+            }
+
+            let fout_s = &fout[..out_len as usize];
+            let fout_native_s = &fout_native[..out_len as usize];
+
+            fout_s
+                .iter()
+                .zip(fout_native_s.iter())
+                .for_each(|(&x, &y)| {
+                    assert_approx_eq!(x, y, 1.0e-6);
+                });
+
+            rate += 5000;
+            if rate > 128000 {
+                break;
+            }
+
+            st.set_rate(RATE, rate);
+            st_native.set_rate(RATE, rate);
+        }
     }
 }
