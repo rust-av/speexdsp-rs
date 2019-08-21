@@ -26,5 +26,14 @@ The bindings are generated using the headers and libraries that ought to be pres
 - [x] Examples
 - [ ] Clean pure-rust reimplementation
 
+## Testing
+
+Currently we have only an integration test to compare the C and the Rust implementation.
+To run it issue:
+
+``` sh
+$ cargo test --features=sys
+```
+
 [1]: https://github.com/servo/rust-bindgen
 [2]: https://github.com/xiph/speexdsp
