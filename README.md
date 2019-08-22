@@ -1,7 +1,7 @@
 # speexdsp bindings and c2rust version
 
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Build Status](https://travis-ci.org/rust-av/speexdsp-rs.svg?branch=master)](https://travis-ci.org/rust-av/speexdsp-rs)
+[![Actions Status](https://github.com/rust-av/speexdsp-rs/workflows/speexdsp/badge.svg)](https://github.com/rust-av/speexdsp-rs/actions)
 [![dependency status](https://deps.rs/repo/github/rust-av/speexdsp-rs/status.svg)](https://deps.rs/repo/github/rust-av/speexdsp-rs)
 [![IRC](https://img.shields.io/badge/irc-%23rust--av-blue.svg)](http://webchat.freenode.net?channels=%23rust-av&uio=d4)
 
