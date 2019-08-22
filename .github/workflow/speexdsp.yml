@@ -1,0 +1,25 @@
+name: speexdsp
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install speexdsp
+      run: git clone https://github.com/xiph/speexdsp.git
+      run: |
+        cd speexdsp
+        ./autogen.sh
+        ./configure --prefix=$HOME/speex_dir
+        make
+        make install
+        export PKG_CONFIG_PATH=$HOME/speex_dir/lib/pkgconfig:$PKG_CONFIG_PATH
+        export LD_LIBRARY_PATH=$HOME/speex_dir/lib:$LD_LIBRARY_PATH
+    - name: Run tests
+      run: |
+        cargo test --all-features
+        cargo test -no-default-features
