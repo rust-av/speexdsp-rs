@@ -36,7 +36,6 @@ mod comparison {
         (in_len as usize, out_len as usize)
     }
 
-
     #[interpolate_test(8, 8)]
     #[interpolate_test(10, 10)]
     fn resampling(quality: usize) {
@@ -78,7 +77,11 @@ mod comparison {
             );
 
             let (in_len, out_len) = st
-                .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
+                .process_float(
+                    0,
+                    &fin[off..off + in_len],
+                    &mut fout[..out_len],
+                )
                 .unwrap();
 
             eprintln!(
