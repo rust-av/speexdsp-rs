@@ -89,6 +89,15 @@ mod sys {
             (in_rate as usize, out_rate as usize)
         }
 
+        pub fn get_ratio(&self) -> (usize, usize) {
+            let mut num = 0;
+            let mut den = 0;
+
+            unsafe { speex_resampler_get_ratio(self.st, &mut num, &mut den) };
+
+            (num as usize, den as usize)
+        }
+
         pub fn process_float(
             &mut self,
             index: usize,
