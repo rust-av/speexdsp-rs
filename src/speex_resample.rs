@@ -2,10 +2,10 @@ use std::mem;
 
 use std::f64::consts::PI as PI_64;
 
-pub const RESAMPLER_ERR_SUCCESS: u32 = 0;
-pub const RESAMPLER_ERR_ALLOC_FAILED: u32 = 1;
-pub const RESAMPLER_ERR_INVALID_ARG: u32 = 3;
-pub const RESAMPLER_ERR_OVERFLOW: u32 = 5;
+pub const RESAMPLER_ERR_SUCCESS: usize = 0;
+pub const RESAMPLER_ERR_ALLOC_FAILED: usize = 1;
+pub const RESAMPLER_ERR_INVALID_ARG: usize = 3;
+pub const RESAMPLER_ERR_OVERFLOW: usize = 5;
 
 #[derive(Clone)]
 pub struct SpeexResamplerState {
@@ -84,6 +84,46 @@ pub type ResamplerBasicFunc = Option<
         _: &mut u32,
     ) -> i32,
 >;
+
+macro_rules! chunk_assign {
+    ($ch_mut:ident, $lbound_mut:expr, $ubound_mut:expr, $val:expr) => {
+        $ch_mut[$lbound_mut as usize..$ubound_mut as usize]
+            .iter_mut()
+            .for_each(|x| *x = $val);
+    };
+}
+
+macro_rules! chunk_copy {
+    ($ch_mut:ident, $lbound_mut:expr, $ubound_mut:expr,
+     $ch:ident, $lbound:expr, $ubound:expr) => {
+        $ch_mut[$lbound_mut as usize..$ubound_mut as usize]
+            .iter_mut()
+            .zip($ch[$lbound as usize..$ubound as usize].iter())
+            .for_each(|(x, y)| *x = *y);
+    };
+}
+
+macro_rules! algo {
+    ($self:ident, $ch_mut:ident, $ch:ident,
+     $old_length:ident, $magic:expr) => {
+        let olen = $old_length + 2 * $magic;
+        let filt_len = $self.filt_len - 1;
+        if $self.filt_len > olen {
+            let new_filt_len = $self.filt_len - olen;
+            for new_last_sample in &mut $self.last_sample {
+                chunk_copy!($ch_mut, new_filt_len, filt_len, $ch, 0, olen - 1);
+                chunk_assign!($ch_mut, 0, new_filt_len, 0.0);
+                $magic = 0;
+                *new_last_sample += new_filt_len / 2;
+            }
+        } else {
+            $magic = (olen - $self.filt_len) / 2;
+            let ubound_mut = filt_len + $magic;
+            let ubound = ubound_mut + $magic;
+            chunk_copy!($ch_mut, 0, ubound_mut, $ch, $magic, ubound);
+        }
+    };
+}
 
 impl SpeexResamplerState {
     /* * Create a new resampler with integer input and output rates.
@@ -164,7 +204,7 @@ impl SpeexResamplerState {
         st.set_quality(quality);
         st.set_rate_frac(ratio_num, ratio_den, in_rate, out_rate);
         let filter_err = st.update_filter();
-        if filter_err == RESAMPLER_ERR_SUCCESS as usize {
+        if filter_err == RESAMPLER_ERR_SUCCESS {
             st.initialised = 1;
         } else {
             panic!("Error");
@@ -232,9 +272,9 @@ impl SpeexResamplerState {
         *out_len -= olen;
         let resampler = self.resampler_ptr.unwrap();
         if resampler as usize == resampler_basic_zero as usize {
-            RESAMPLER_ERR_ALLOC_FAILED as usize
+            RESAMPLER_ERR_ALLOC_FAILED
         } else {
-            RESAMPLER_ERR_SUCCESS as usize
+            RESAMPLER_ERR_SUCCESS
         }
     }
 
@@ -286,9 +326,8 @@ impl SpeexResamplerState {
             if 0 == self.magic_samples[channel_index as usize] {
                 j = 0u32;
                 while j < ichunk {
-                    self.mem[mem_idx
-                        + j as usize
-                        + (self.filt_len - 1) as usize] =
+                    self.mem
+                        [mem_idx + j as usize + (self.filt_len - 1) as usize] =
                         in_0[(j * istride_save) as usize] as f32;
                     j += 1
                 }
@@ -325,9 +364,9 @@ impl SpeexResamplerState {
         *out_len -= olen;
         let resampler = self.resampler_ptr.unwrap();
         if resampler as usize == resampler_basic_zero as usize {
-            RESAMPLER_ERR_ALLOC_FAILED as usize
+            RESAMPLER_ERR_ALLOC_FAILED
         } else {
-            RESAMPLER_ERR_SUCCESS as usize
+            RESAMPLER_ERR_SUCCESS
         }
     }
 
@@ -372,9 +411,9 @@ impl SpeexResamplerState {
         self.out_stride = ostride_save;
         let resampler = self.resampler_ptr.unwrap();
         if resampler as usize == resampler_basic_zero as usize {
-            RESAMPLER_ERR_ALLOC_FAILED as usize
+            RESAMPLER_ERR_ALLOC_FAILED
         } else {
-            RESAMPLER_ERR_SUCCESS as usize
+            RESAMPLER_ERR_SUCCESS
         }
     }
 
@@ -419,9 +458,9 @@ impl SpeexResamplerState {
         self.out_stride = ostride_save;
         let resampler = self.resampler_ptr.unwrap();
         if resampler as usize == resampler_basic_zero as usize {
-            RESAMPLER_ERR_ALLOC_FAILED as usize
+            RESAMPLER_ERR_ALLOC_FAILED
         } else {
-            RESAMPLER_ERR_SUCCESS as usize
+            RESAMPLER_ERR_SUCCESS
         }
     }
 
@@ -432,15 +471,15 @@ impl SpeexResamplerState {
      */
     pub fn set_quality(&mut self, quality: usize) -> usize {
         if quality > 10 {
-            RESAMPLER_ERR_INVALID_ARG as usize
+            RESAMPLER_ERR_INVALID_ARG
         } else if self.quality as usize == quality {
-            RESAMPLER_ERR_SUCCESS as usize
+            RESAMPLER_ERR_SUCCESS
         } else {
             self.quality = quality as u32;
             if self.initialised != 0 {
                 self.update_filter()
             } else {
-                RESAMPLER_ERR_SUCCESS as usize
+                RESAMPLER_ERR_SUCCESS
             }
         }
     }
@@ -470,13 +509,13 @@ impl SpeexResamplerState {
         out_rate: usize,
     ) -> usize {
         if ratio_num == 0 || ratio_den == 0 {
-            RESAMPLER_ERR_INVALID_ARG as usize
+            RESAMPLER_ERR_INVALID_ARG
         } else if self.in_rate == in_rate as u32
             && self.out_rate == out_rate as u32
             && self.num_rate == ratio_num as u32
             && self.den_rate == ratio_den as u32
         {
-            RESAMPLER_ERR_SUCCESS as usize
+            RESAMPLER_ERR_SUCCESS
         } else {
             let old_den = self.den_rate;
             self.in_rate = in_rate as u32;
@@ -489,8 +528,8 @@ impl SpeexResamplerState {
             if old_den > 0 {
                 for val in &mut self.samp_frac_num {
                     let res = _muldiv(val, *val, self.den_rate, old_den);
-                    if res != RESAMPLER_ERR_SUCCESS as usize {
-                        return RESAMPLER_ERR_OVERFLOW as usize;
+                    if res != RESAMPLER_ERR_SUCCESS {
+                        return RESAMPLER_ERR_OVERFLOW;
                     } else {
                         if *val >= self.den_rate {
                             *val = self.den_rate - 1;
@@ -501,7 +540,7 @@ impl SpeexResamplerState {
             if self.initialised != 0 {
                 self.update_filter()
             } else {
-                RESAMPLER_ERR_SUCCESS as usize
+                RESAMPLER_ERR_SUCCESS
             }
         }
     }
@@ -604,462 +643,155 @@ impl SpeexResamplerState {
         self.mem = vec![0.0; nb_channels * (self.filt_len - 1) as usize];
     }
 
+    #[inline]
+    fn num_den(&mut self) {
+        self.cutoff = QUALITY_MAP[self.quality as usize].downsample_bandwidth
+            * self.den_rate as f32
+            / self.num_rate as f32;
+        let pass = self.filt_len;
+        _muldiv(&mut self.filt_len, pass, self.num_rate, self.den_rate);
+        self.filt_len = ((self.filt_len - 1) & (!7)) + 8;
+        self.oversample = (1..5)
+            .filter(|x| 2u32.pow(*x) * self.den_rate < self.num_rate)
+            .fold(self.oversample, |acc, _| acc >> 1);
+
+        if self.oversample < 1 {
+            self.oversample = 1;
+        }
+    }
+
+    #[inline]
+    fn use_direct(&mut self) {
+        let iter_chunk = self.sinc_table.chunks_mut(self.filt_len as usize);
+        for (i, chunk) in iter_chunk.enumerate() {
+            for (j, elem) in chunk.iter_mut().enumerate() {
+                *elem = sinc(
+                    self.cutoff,
+                    (j as f32 - self.filt_len as f32 / 2.0 + 1.0)
+                        - (i as f32) / self.den_rate as f32,
+                    self.filt_len as i32,
+                    QUALITY_MAP[self.quality as usize].window_func,
+                );
+            }
+        }
+        if self.quality > 8 {
+            self.resampler_ptr = Some(resampler_basic_direct_double);
+        } else {
+            self.resampler_ptr = Some(resampler_basic_direct_single);
+        }
+    }
+
+    #[inline]
+    fn not_use_direct(&mut self) {
+        let quality = self.quality as usize;
+        let cutoff = self.cutoff;
+        let oversample = self.oversample;
+        let filt_len = self.filt_len;
+        self.sinc_table
+            .iter_mut()
+            .enumerate()
+            .take((oversample * filt_len + 8) as usize)
+            .for_each(|(i, x)| {
+                *x = sinc(
+                    cutoff,
+                    (i as i32 - 4) as f32 / oversample as f32
+                        - filt_len as f32 / 2.0,
+                    filt_len as i32,
+                    QUALITY_MAP[quality].window_func,
+                )
+            });
+        if self.quality > 8 {
+            self.resampler_ptr = Some(resampler_basic_interpolate_double);
+        } else {
+            self.resampler_ptr = Some(resampler_basic_interpolate_single);
+        }
+    }
+
+    #[inline(always)]
+    fn chunks_iterator(
+        &mut self,
+        old_length: u32,
+        alloc_size: usize,
+        algo: usize,
+    ) {
+        let mem_copy = self.mem.clone();
+
+        let mut_mem = self.mem.chunks_mut(self.mem_alloc_size as usize);
+        let mem = mem_copy.chunks(alloc_size);
+
+        for (ch_mut, ch) in mut_mem.zip(mem) {
+            for magic in &mut self.magic_samples {
+                if algo == 0 {
+                    let range = old_length - 1 + *magic;
+                    chunk_copy!(ch_mut, *magic, range, ch, 0, range);
+                    chunk_assign!(ch_mut, 0, *magic, 0.0);
+                } else if algo == 1 {
+                    algo!(self, ch_mut, ch, old_length, *magic);
+                } else {
+                    let skip = (old_length - self.filt_len) / 2;
+                    let ubound = self.filt_len - 1 + skip + *magic;
+                    chunk_copy!(ch_mut, 0, ubound, ch, skip, ubound + skip);
+                    *magic += skip;
+                }
+            }
+        }
+    }
+
     fn update_filter(&mut self) -> usize {
-        let mut current_block: u64;
         let old_length = self.filt_len;
-        let old_alloc_size = self.mem_alloc_size;
-        let mut min_sinc_table_length = 0;
+        let quality = self.quality as usize;
+        let old_alloc_size = self.mem_alloc_size as usize;
         self.int_advance = self.num_rate / self.den_rate;
         self.frac_advance = self.num_rate % self.den_rate;
-        self.oversample = QUALITY_MAP[self.quality as usize].oversample as u32;
-        self.filt_len = QUALITY_MAP[self.quality as usize].base_length as u32;
+        self.oversample = QUALITY_MAP[quality].oversample as u32;
+        self.filt_len = QUALITY_MAP[quality].base_length as u32;
         if self.num_rate > self.den_rate {
-            self.cutoff = QUALITY_MAP[self.quality as usize]
-                .downsample_bandwidth
-                * self.den_rate as f32
-                / self.num_rate as f32;
-            let pass = self.filt_len;
-            let ret = _muldiv(
-                &mut self.filt_len,
-                pass,
-                self.num_rate,
-                self.den_rate,
-            );
-            if ret != RESAMPLER_ERR_SUCCESS as usize {
-                current_block = 13465332693182510667;
-            } else {
-                self.filt_len = (self.filt_len.wrapping_sub(1i32 as u32)
-                    & !7i32 as u32)
-                    .wrapping_add(8i32 as u32);
-                if (2i32 as u32).wrapping_mul(self.den_rate) < self.num_rate {
-                    self.oversample >>= 1i32
-                }
-                if (4i32 as u32).wrapping_mul(self.den_rate) < self.num_rate {
-                    self.oversample >>= 1i32
-                }
-                if (8i32 as u32).wrapping_mul(self.den_rate) < self.num_rate {
-                    self.oversample >>= 1i32
-                }
-                if (16i32 as u32).wrapping_mul(self.den_rate) < self.num_rate {
-                    self.oversample >>= 1i32
-                }
-                if self.oversample < 1i32 as u32 {
-                    self.oversample = 1i32 as u32;
-                    current_block = 8258075665625361029;
-                } else {
-                    current_block = 8258075665625361029;
-                }
-            }
+            self.num_den();
         } else {
-            self.cutoff =
-                QUALITY_MAP[self.quality as usize].upsample_bandwidth;
-            current_block = 8258075665625361029;
+            self.cutoff = QUALITY_MAP[quality].upsample_bandwidth;
         }
-        match current_block {
-            8258075665625361029 => {
-                let use_direct: i32 =
-                    (self.filt_len.wrapping_mul(self.den_rate)
-                        <= self
-                            .filt_len
-                            .wrapping_mul(self.oversample)
-                            .wrapping_add(8i32 as u32)
-                        && (2147483647i32 as u64)
-                            .wrapping_div(::std::mem::size_of::<f32>() as u64)
-                            .wrapping_div(self.den_rate as u64)
-                            >= self.filt_len as u64)
-                        as i32;
-                if 0 != use_direct {
-                    min_sinc_table_length =
-                        self.filt_len.wrapping_mul(self.den_rate);
-                    current_block = 14523784380283086299;
-                } else if (2147483647i32 as u64)
-                    .wrapping_div(::std::mem::size_of::<f32>() as u64)
-                    .wrapping_sub(8i32 as u64)
-                    .wrapping_div(self.oversample as u64)
-                    < self.filt_len as u64
-                {
-                    current_block = 13465332693182510667;
-                } else {
-                    min_sinc_table_length = self
-                        .filt_len
-                        .wrapping_mul(self.oversample)
-                        .wrapping_add(8i32 as u32);
-                    current_block = 14523784380283086299;
-                }
-                match current_block {
-                    13465332693182510667 => {}
-                    _ => {
-                        if self.sinc_table_length < min_sinc_table_length {
-                            self.sinc_table =
-                                vec![0.0; min_sinc_table_length as usize];
-                            self.sinc_table_length = min_sinc_table_length;
-                        }
-                        current_block = 11650488183268122163;
-                        match current_block {
-                            13465332693182510667 => {}
-                            _ => {
-                                if 0 != use_direct {
-                                    let mut i: u32 = 0;
-                                    while i < self.den_rate {
-                                        let mut j: i32 = 0;
-                                        while (j as u32) < self.filt_len {
-                                            self.sinc_table[i
-                                                .wrapping_mul(self.filt_len)
-                                                .wrapping_add(j as u32)
-                                                as usize] = sinc(
-                                                self.cutoff,
-                                                (j - self.filt_len as i32
-                                                    / 2i32
-                                                    + 1i32)
-                                                    as f32
-                                                    - i as f32
-                                                        / self.den_rate as f32,
-                                                self.filt_len as i32,
-                                                QUALITY_MAP
-                                                    [self.quality as usize]
-                                                    .window_func,
-                                            );
-                                            j += 1
-                                        }
-                                        i = i.wrapping_add(1)
-                                    }
-                                    if self.quality > 8 {
-                                        self.resampler_ptr =
-                                            Some(resampler_basic_direct_double)
-                                    } else {
-                                        self.resampler_ptr =
-                                            Some(resampler_basic_direct_single)
-                                    }
-                                } else {
-                                    let mut i_0: i32 = -4;
-                                    while i_0
-                                        < self
-                                            .oversample
-                                            .wrapping_mul(self.filt_len)
-                                            .wrapping_add(4i32 as u32)
-                                            as i32
-                                    {
-                                        self.sinc_table
-                                            [(i_0 + 4i32) as usize] = sinc(
-                                            self.cutoff,
-                                            i_0 as f32
-                                                / self.oversample as f32
-                                                - self
-                                                    .filt_len
-                                                    .wrapping_div(2i32 as u32)
-                                                    as f32,
-                                            self.filt_len as i32,
-                                            QUALITY_MAP[self.quality as usize]
-                                                .window_func,
-                                        );
-                                        i_0 += 1
-                                    }
-                                    if self.quality > 8 {
-                                        self.resampler_ptr = Some(
-                                            resampler_basic_interpolate_double,
-                                        )
-                                    } else {
-                                        self.resampler_ptr = Some(
-                                            resampler_basic_interpolate_single,
-                                        )
-                                    }
-                                }
-                                let min_alloc_size: u32 = self
-                                    .filt_len
-                                    .wrapping_sub(1i32 as u32)
-                                    .wrapping_add(self.buffer_size);
-                                if min_alloc_size > self.mem_alloc_size {
-                                    if (2147483647i32 as u64)
-                                        .wrapping_div(
-                                            ::std::mem::size_of::<f32>()
-                                                as u64,
-                                        )
-                                        .wrapping_div(self.nb_channels as u64)
-                                        < min_alloc_size as u64
-                                    {
-                                        current_block = 13465332693182510667;
-                                    } else {
-                                        self.mem = Vec::with_capacity(
-                                            self.nb_channels
-                                                .wrapping_mul(min_alloc_size)
-                                                as usize,
-                                        );
-                                        self.mem_alloc_size = min_alloc_size;
-                                        current_block = 15089075282327824602;
-                                    }
-                                } else {
-                                    current_block = 15089075282327824602;
-                                }
-                                match current_block {
-                                    13465332693182510667 => {}
-                                    _ => {
-                                        if 0 == self.started {
-                                            let dim: usize =
-                                                self.nb_channels.wrapping_mul(
-                                                    self.mem_alloc_size,
-                                                )
-                                                    as usize;
-                                            for _ in 0..dim {
-                                                self.mem.push(0.0);
-                                            }
-                                        } else if self.filt_len > old_length {
-                                            let mut i_2: u32 =
-                                                self.nb_channels;
-                                            loop {
-                                                let fresh0 = i_2;
-                                                i_2 = i_2.wrapping_sub(1);
-                                                if !(0 != fresh0) {
-                                                    break;
-                                                }
-                                                let olen: u32 = old_length
-                                                    .wrapping_add(
-                                                        (2i32 as u32)
-                                                            .wrapping_mul(
-                                                            self.magic_samples
-                                                                [i_2 as usize],
-                                                        ),
-                                                    );
-                                                let mut j_0: u32 = old_length
-                                                    .wrapping_sub(1i32 as u32)
-                                                    .wrapping_add(
-                                                        self.magic_samples
-                                                            [i_2 as usize],
-                                                    );
-                                                loop {
-                                                    let fresh1 = j_0;
-                                                    j_0 = j_0.wrapping_sub(1);
-                                                    if !(0 != fresh1) {
-                                                        break;
-                                                    }
-                                                    println!(
-                                                    "{}",
-                                                    i_2.wrapping_mul(
-                                                        self.mem_alloc_size
-                                                    )
-                                                    .wrapping_add(j_0)
-                                                    .wrapping_add(
-                                                        self.magic_samples
-                                                            [i_2 as usize]
-                                                    )
-                                                );
-                                                    self.mem[i_2
-                                                    .wrapping_mul(
-                                                        self.mem_alloc_size,
-                                                    )
-                                                    .wrapping_add(j_0)
-                                                    .wrapping_add(
-                                                        self.magic_samples
-                                                            [i_2 as usize],
-                                                    )
-                                                    as usize] = self.mem[i_2
-                                                    .wrapping_mul(
-                                                        old_alloc_size,
-                                                    )
-                                                    .wrapping_add(j_0)
-                                                    as usize];
-                                                    println!("here");
-                                                }
-                                                j_0 = 0i32 as u32;
-                                                while j_0
-                                                    < self.magic_samples
-                                                        [i_2 as usize]
-                                                {
-                                                    self.mem[i_2
-                                                    .wrapping_mul(
-                                                        self.mem_alloc_size,
-                                                    )
-                                                    .wrapping_add(j_0)
-                                                    as usize] = 0i32 as f32;
-                                                    j_0 = j_0.wrapping_add(1)
-                                                }
-                                                self.magic_samples
-                                                    [i_2 as usize] =
-                                                    0i32 as u32;
-                                                if self.filt_len > olen {
-                                                    j_0 = 0i32 as u32;
-                                                    while j_0
-                                                        < olen.wrapping_sub(
-                                                            1i32 as u32,
-                                                        )
-                                                    {
-                                                        self.mem[i_2
-                                                        .wrapping_mul(
-                                                            self.mem_alloc_size,
-                                                        )
-                                                        .wrapping_add(
-                                                            self.filt_len
-                                                                .wrapping_sub(
-                                                                    2i32
-                                                                        as u32,
-                                                                )
-                                                                .wrapping_sub(
-                                                                    j_0,
-                                                                ),
-                                                        )
-                                                        as usize] = self.mem[i_2
-                                                        .wrapping_mul(
-                                                            self.mem_alloc_size,
-                                                        )
-                                                        .wrapping_add(
-                                                            olen.wrapping_sub(
-                                                                2i32 as u32,
-                                                            )
-                                                            .wrapping_sub(j_0),
-                                                        )
-                                                        as usize];
-                                                        j_0 =
-                                                            j_0.wrapping_add(1)
-                                                    }
-                                                    while j_0
-                                                        < self
-                                                            .filt_len
-                                                            .wrapping_sub(
-                                                                1i32 as u32,
-                                                            )
-                                                    {
-                                                        self.mem[i_2
-                                                        .wrapping_mul(
-                                                            self.mem_alloc_size,
-                                                        )
-                                                        .wrapping_add(
-                                                            self.filt_len
-                                                                .wrapping_sub(
-                                                                    2i32
-                                                                        as u32,
-                                                                )
-                                                                .wrapping_sub(
-                                                                    j_0,
-                                                                ),
-                                                        )
-                                                        as usize] =
-                                                        0i32 as f32;
-                                                        j_0 =
-                                                            j_0.wrapping_add(1)
-                                                    }
-                                                    let ref mut fresh2 = self
-                                                        .last_sample
-                                                        [i_2 as usize];
-                                                    *fresh2 = (*fresh2 as u32)
-                                                        .wrapping_add(
-                                                            self.filt_len
-                                                                .wrapping_sub(
-                                                                    olen,
-                                                                )
-                                                                .wrapping_div(
-                                                                    2i32
-                                                                        as u32,
-                                                                ),
-                                                        )
-                                                } else {
-                                                    self.magic_samples
-                                                        [i_2 as usize] = olen
-                                                        .wrapping_sub(
-                                                            self.filt_len,
-                                                        )
-                                                        .wrapping_div(
-                                                            2i32 as u32,
-                                                        );
-                                                    j_0 = 0i32 as u32;
-                                                    while j_0 < self
-                                                        .filt_len
-                                                        .wrapping_sub(
-                                                            1i32 as u32,
-                                                        )
-                                                        .wrapping_add(
-                                                            self.magic_samples
-                                                                [i_2 as usize],
-                                                        )
-                                                    {
-                                                        self.mem[i_2
-                                                        .wrapping_mul(
-                                                            self.mem_alloc_size,
-                                                        )
-                                                        .wrapping_add(j_0)
-                                                        as usize] = self.mem[i_2
-                                                        .wrapping_mul(
-                                                            self.mem_alloc_size,
-                                                        )
-                                                        .wrapping_add(j_0)
-                                                        .wrapping_add(
-                                                            self.magic_samples
-                                                                [i_2 as usize],
-                                                        )
-                                                        as usize];
-                                                        j_0 =
-                                                            j_0.wrapping_add(1)
-                                                    }
-                                                }
-                                            }
-                                        } else if self.filt_len < old_length {
-                                            let mut i_3: u32 = 0;
-                                            while i_3 < self.nb_channels {
-                                                let old_magic: u32 = self
-                                                    .magic_samples
-                                                    [i_3 as usize];
-                                                self.magic_samples
-                                                    [i_3 as usize] =
-                                                    old_length
-                                                        .wrapping_sub(
-                                                            self.filt_len,
-                                                        )
-                                                        .wrapping_div(
-                                                            2i32 as u32,
-                                                        );
-                                                let mut j_1: u32 = 0;
-                                                while j_1
-                                                    < self
-                                                        .filt_len
-                                                        .wrapping_sub(
-                                                            1i32 as u32,
-                                                        )
-                                                        .wrapping_add(
-                                                            self.magic_samples
-                                                                [i_3 as usize],
-                                                        )
-                                                        .wrapping_add(
-                                                            old_magic,
-                                                        )
-                                                {
-                                                    self.mem[i_3
-                                                    .wrapping_mul(
-                                                        self.mem_alloc_size,
-                                                    )
-                                                    .wrapping_add(j_1)
-                                                    as usize] = self.mem[i_3
-                                                    .wrapping_mul(
-                                                        self.mem_alloc_size,
-                                                    )
-                                                    .wrapping_add(j_1)
-                                                    .wrapping_add(
-                                                        self.magic_samples
-                                                            [i_3 as usize],
-                                                    )
-                                                    as usize];
-                                                    j_1 = j_1.wrapping_add(1)
-                                                }
-                                                let ref mut fresh3 = self
-                                                    .magic_samples
-                                                    [i_3 as usize];
-                                                *fresh3 = (*fresh3 as u32)
-                                                    .wrapping_add(old_magic)
-                                                    as u32
-                                                    as u32;
-                                                i_3 = i_3.wrapping_add(1)
-                                            }
-                                        }
-                                        return RESAMPLER_ERR_SUCCESS as usize;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            _ => {}
+
+        let use_direct = self.filt_len * self.den_rate
+            <= self.filt_len * self.oversample + 8
+            && 2147483647 as u64
+                / ::std::mem::size_of::<f32>() as u64
+                / self.den_rate as u64
+                >= self.filt_len as u64;
+
+        let mut min_sinc_table_length = self.filt_len * self.den_rate;
+        if !use_direct {
+            min_sinc_table_length = self.filt_len * self.oversample + 8;
         }
-        self.resampler_ptr = Some(resampler_basic_zero);
-        self.filt_len = old_length;
-        RESAMPLER_ERR_ALLOC_FAILED as usize
+
+        if self.sinc_table_length < min_sinc_table_length {
+            self.sinc_table = vec![0.0; min_sinc_table_length as usize];
+            self.sinc_table_length = min_sinc_table_length;
+        }
+
+        if use_direct {
+            self.use_direct();
+        } else {
+            self.not_use_direct();
+        }
+
+        let min_alloc_size = self.filt_len - 1 + self.buffer_size;
+        if min_alloc_size > self.mem_alloc_size {
+            let mem = self.mem.clone();
+            self.mem = vec![0.0; (self.nb_channels * min_alloc_size) as usize];
+            self.mem[0..mem.len()].copy_from_slice(&mem);
+            self.mem_alloc_size = min_alloc_size;
+        }
+
+        if self.started == 0 {
+            let dim = (self.nb_channels * self.mem_alloc_size) as usize;
+            self.mem = vec![0.0; dim];
+        } else if self.filt_len > old_length {
+            self.chunks_iterator(old_length, old_alloc_size, 0);
+            self.chunks_iterator(old_length, self.mem_alloc_size as usize, 1);
+        } else if self.filt_len < old_length {
+            self.chunks_iterator(old_length, self.mem_alloc_size as usize, 2);
+        }
+        return RESAMPLER_ERR_SUCCESS;
     }
 }
 
@@ -1373,11 +1105,11 @@ static _KAISER10: FuncDef = FuncDef::new(&KAISER10_TABLE, 32);
 static KAISER10_TABLE: [f64; 36] = {
     [
         0.99537781, 1.0, 0.99537781, 0.98162644, 0.95908712, 0.92831446,
-        0.89005583, 0.84522401, 0.79486424, 0.74011713, 0.68217934,
-        0.62226347, 0.56155915, 0.5011968, 0.44221549, 0.38553619, 0.33194107,
-        0.28205962, 0.23636152, 0.19515633, 0.15859932, 0.1267028, 0.09935205,
-        0.07632451, 0.05731132, 0.0419398, 0.02979584, 0.0204451, 0.01345224,
-        0.00839739, 0.00488951, 0.00257636, 0.00115101, 0.00035515, 0.0, 0.0,
+        0.89005583, 0.84522401, 0.79486424, 0.74011713, 0.68217934, 0.62226347,
+        0.56155915, 0.5011968, 0.44221549, 0.38553619, 0.33194107, 0.28205962,
+        0.23636152, 0.19515633, 0.15859932, 0.1267028, 0.09935205, 0.07632451,
+        0.05731132, 0.0419398, 0.02979584, 0.0204451, 0.01345224, 0.00839739,
+        0.00488951, 0.00257636, 0.00115101, 0.00035515, 0.0, 0.0,
     ]
 };
 
@@ -1386,12 +1118,11 @@ static _KAISER8: FuncDef = FuncDef::new(&KAISER8_TABLE, 32);
 static KAISER8_TABLE: [f64; 36] = {
     [
         0.99635258, 1.0, 0.99635258, 0.98548012, 0.96759014, 0.943022,
-        0.91223751, 0.87580811, 0.83439927, 0.78875245, 0.73966538,
-        0.68797126, 0.6345175, 0.58014482, 0.52566725, 0.47185369, 0.4194115,
-        0.36897272, 0.32108304, 0.27619388, 0.23465776, 0.1967267, 0.1625538,
-        0.13219758, 0.10562887, 0.08273982, 0.06335451, 0.04724088,
-        0.03412321, 0.0236949, 0.01563093, 0.00959968, 0.00527363, 0.00233883,
-        0.0005, 0.0,
+        0.91223751, 0.87580811, 0.83439927, 0.78875245, 0.73966538, 0.68797126,
+        0.6345175, 0.58014482, 0.52566725, 0.47185369, 0.4194115, 0.36897272,
+        0.32108304, 0.27619388, 0.23465776, 0.1967267, 0.1625538, 0.13219758,
+        0.10562887, 0.08273982, 0.06335451, 0.04724088, 0.03412321, 0.0236949,
+        0.01563093, 0.00959968, 0.00527363, 0.00233883, 0.0005, 0.0,
     ]
 };
 
@@ -1400,12 +1131,11 @@ static _KAISER6: FuncDef = FuncDef::new(&KAISER6_TABLE, 32);
 static KAISER6_TABLE: [f64; 36] = {
     [
         0.99733006, 1.0, 0.99733006, 0.98935595, 0.97618418, 0.95799003,
-        0.93501423, 0.90755855, 0.87598009, 0.84068475, 0.80211977,
-        0.76076565, 0.71712752, 0.67172623, 0.62508937, 0.57774224,
-        0.53019925, 0.48295561, 0.43647969, 0.39120616, 0.34752997,
-        0.30580127, 0.26632152, 0.22934058, 0.19505503, 0.16360756,
-        0.13508755, 0.10953262, 0.0869312, 0.067226, 0.0503182, 0.03607231,
-        0.02432151, 0.01487334, 0.00752, 0.0,
+        0.93501423, 0.90755855, 0.87598009, 0.84068475, 0.80211977, 0.76076565,
+        0.71712752, 0.67172623, 0.62508937, 0.57774224, 0.53019925, 0.48295561,
+        0.43647969, 0.39120616, 0.34752997, 0.30580127, 0.26632152, 0.22934058,
+        0.19505503, 0.16360756, 0.13508755, 0.10953262, 0.0869312, 0.067226,
+        0.0503182, 0.03607231, 0.02432151, 0.01487334, 0.00752, 0.0,
     ]
 };
 
@@ -1420,10 +1150,8 @@ fn sinc(cutoff: f32, x: f32, n: i32, window_func: &FuncDef) -> f32 {
         0.0
     } else {
         let first_factor = cutoff_64 * (PI_64 * xx).sin() / (PI_64 * xx);
-        let second_factor = compute_func(
-            (2.0 * f64::from(x) / n_64).abs() as f32,
-            window_func,
-        );
+        let second_factor =
+            compute_func((2.0 * f64::from(x) / n_64).abs() as f32, window_func);
         (first_factor * second_factor) as f32
     }
 }
@@ -1435,8 +1163,8 @@ fn compute_func(x: f32, func: &FuncDef) -> f64 {
     let frac = f64::from(y - ind as f32);
     interp[3] = -0.1666666667 * frac + 0.1666666667 * frac.powi(3);
     interp[2] = frac + 0.5 * frac.powi(2) - 0.5 * frac.powi(3);
-    interp[0] = -0.3333333333 * frac + 0.5 * frac.powi(2)
-        - 0.1666666667 * frac.powi(3);
+    interp[0] =
+        -0.3333333333 * frac + 0.5 * frac.powi(2) - 0.1666666667 * frac.powi(3);
     interp[1] = 1.0 - interp[3] - interp[2] - interp[0];
 
     interp
@@ -1541,10 +1269,10 @@ fn _muldiv(result: &mut u32, value: u32, mul: u32, div: u32) -> usize {
         || major > 4294967295 / mul
         || major * mul > 4294967295 - remainder * mul / div
     {
-        RESAMPLER_ERR_OVERFLOW as usize
+        RESAMPLER_ERR_OVERFLOW
     } else {
         *result = remainder * mul / div + major * mul;
-        RESAMPLER_ERR_SUCCESS as usize
+        RESAMPLER_ERR_SUCCESS
     }
 }
 
@@ -1588,7 +1316,7 @@ fn speex_resampler_process_native(
             st.mem[mem_idx + (j as u32 + ilen) as usize];
         j += 1
     }
-    RESAMPLER_ERR_SUCCESS as usize
+    RESAMPLER_ERR_SUCCESS
 }
 
 fn speex_resampler_magic<'a, 'b>(
