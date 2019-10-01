@@ -25,21 +25,18 @@ mod comparison {
     ) -> (usize, usize) {
         let mut in_len = input.len() as u32;
         let mut out_len = output.len() as u32;
-        st.process_float(
-            index as u32,
-            input,
-            &mut in_len,
-            output,
-            &mut out_len,
-        );
+        st.process_float(index as u32, input, &mut in_len, output, &mut out_len);
 
         (in_len as usize, out_len as usize)
     }
 
-    #[interpolate_test(8, 8)]
-    #[interpolate_test(10, 10)]
-    fn resampling(quality: usize) {
-        let start_rate = 1000;
+    #[interpolate_test(quality8_num_gt_den, 8, true)]
+    #[interpolate_test(quality10_num_gt_den, 10, true)]
+    #[interpolate_test(quality8_num_lt_den, 8, false)]
+    #[interpolate_test(quality10_num_lt_den, 10, false)]
+    fn resampling(quality: usize, num_gt_den: bool) {
+        let mut init_rate = RATE;
+        let mut start_rate = 1000;
         let mut off = 0;
         let mut avail = INBLOCK as isize;
 
@@ -49,9 +46,14 @@ mod comparison {
         let mut fout = vec![0f32; INBLOCK * 8];
         let mut fout_native = vec![0f32; INBLOCK * 8];
 
-        let mut st = State::new(1, RATE, RATE, 4).unwrap();
+        if !num_gt_den {
+            init_rate = 96000;
+            start_rate = 96000;
+        }
 
-        let mut st_native = SpeexResamplerState::new(1, RATE, RATE, 4);
+        let mut st = State::new(1, RATE, init_rate, 4).unwrap();
+
+        let mut st_native = SpeexResamplerState::new(1, RATE, init_rate, 4);
 
         st.set_rate(RATE, start_rate);
         st.skip_zeros();
@@ -77,11 +79,7 @@ mod comparison {
             );
 
             let (in_len, out_len) = st
-                .process_float(
-                    0,
-                    &fin[off..off + in_len],
-                    &mut fout[..out_len],
-                )
+                .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
                 .unwrap();
 
             eprintln!(
@@ -109,8 +107,13 @@ mod comparison {
                     assert_approx_eq!(x, y, 1.0e-6);
                 });
 
-            st.set_rate(RATE, rate);
-            st_native.set_rate(RATE, rate);
+            if num_gt_den {
+                st.set_rate(RATE, rate);
+                st_native.set_rate(RATE, rate);
+            } else {
+                st.set_rate(rate, RATE);
+                st_native.set_rate(rate, RATE);
+            }
         }
     }
 }
