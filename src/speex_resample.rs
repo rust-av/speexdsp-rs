@@ -636,11 +636,11 @@ impl SpeexResamplerState {
      */
     pub fn reset_mem(&mut self) {
         let nb_channels = self.nb_channels as usize;
-        self.last_sample = vec![0; nb_channels];
-        self.magic_samples = vec![0; nb_channels];
-        self.samp_frac_num = vec![0; nb_channels];
+        self.last_sample.iter_mut().for_each(|elem| *elem = 0);
+        self.magic_samples.iter_mut().for_each(|elem| *elem = 0);
+        self.samp_frac_num.iter_mut().for_each(|elem| *elem = 0);
 
-        self.mem = vec![0.0; nb_channels * (self.filt_len - 1) as usize];
+        self.mem.iter_mut().for_each(|elem| *elem = 0.);
     }
 
     #[inline]
