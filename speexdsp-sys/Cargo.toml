@@ -16,7 +16,7 @@ build = []
 [build-dependencies]
 autotools = "0.2"
 metadeps = "1.1"
-bindgen = "0.52"
+bindgen = "0.53"
 
 [dev-dependencies]
 byteorder = "1.3"
