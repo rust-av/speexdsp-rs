@@ -1,0 +1,14 @@
+[package]
+name = "speexdsp-resampler"
+version = "0.1.0"
+authors = ["Luca Barbato <lu_zero@gentoo.org>"]
+description = "Pure rust port of the speexdsp resampler"
+homepage = "https://github.com/rust-av/speexdsp-rs"
+repository = "https://github.com/rust-av/speexdsp-rs"
+keywords = ["audio", "resampler"]
+license = "BSD-3"
+readme = "README.md"
+edition = "2018"
+
+
+
