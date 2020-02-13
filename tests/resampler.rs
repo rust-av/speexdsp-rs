@@ -1,34 +1,17 @@
-extern crate assert_approx_eq;
-extern crate interpolate_name;
-extern crate speexdsp;
-
 #[cfg(feature = "sys")]
 mod comparison {
     use assert_approx_eq::assert_approx_eq;
     use interpolate_name::interpolate_test;
 
-    use speexdsp::resampler::*;
-    use speexdsp::speex_resample::*;
+    use speexdsp::resampler::Resampler;
+    use speexdsp::resampler as sys;
+    use speexdsp::resampler::native as native;
 
     use std::f32::consts::PI;
 
     const PERIOD: f32 = 32f32;
     const INBLOCK: usize = 1024;
     const RATE: usize = 48000;
-
-    #[inline(always)]
-    fn process_float_native(
-        st: &mut SpeexResamplerState,
-        index: usize,
-        input: &[f32],
-        output: &mut [f32],
-    ) -> (usize, usize) {
-        let mut in_len = input.len() as u32;
-        let mut out_len = output.len() as u32;
-        st.process_float(index as u32, input, &mut in_len, output, &mut out_len);
-
-        (in_len as usize, out_len as usize)
-    }
 
     #[interpolate_test(quality8_num_gt_den, 8, true)]
     #[interpolate_test(quality10_num_gt_den, 10, true)]
@@ -51,9 +34,9 @@ mod comparison {
             start_rate = 96000;
         }
 
-        let mut st = State::new(1, RATE, init_rate, 4).unwrap();
+        let mut st = sys::State::new(1, RATE, init_rate, 4).unwrap();
 
-        let mut st_native = SpeexResamplerState::new(1, RATE, init_rate, 4);
+        let mut st_native = sys::State::new(1, RATE, init_rate, 4).unwrap();
 
         st.set_rate(RATE, start_rate);
         st.skip_zeros();
@@ -63,7 +46,7 @@ mod comparison {
         st_native.set_rate(RATE, start_rate);
         st_native.skip_zeros();
 
-        st_native.set_quality(quality);
+        st_native.set_quality(quality).unwrap();
 
         for rate in (start_rate..128000).step_by(5000) {
             let in_len = avail as usize;
@@ -71,12 +54,11 @@ mod comparison {
             let prev_in_len = in_len;
             let prev_out_len = out_len;
 
-            let (in_len_native, out_len_native) = process_float_native(
-                &mut st_native,
+            let (in_len_native, out_len_native) = st_native.process_float(
                 0,
                 &fin[off..off + in_len],
                 &mut fout_native[..out_len],
-            );
+            ).unwrap();
 
             let (in_len, out_len) = st
                 .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])

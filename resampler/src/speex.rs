@@ -529,7 +529,7 @@ impl SpeexResamplerState {
      * common denominator.
      * @param st Resampler state
      */
-    pub fn get_ratio(&mut self) -> (usize, usize) {
+    pub fn get_ratio(&self) -> (usize, usize) {
         (self.num_rate as usize, self.den_rate as usize)
     }
 

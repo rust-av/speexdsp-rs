@@ -1,6 +1,6 @@
 #[cfg(feature = "sys")]
 mod sys {
-    use echo::SpeexEcho;
+    use crate::echo::SpeexEcho;
     use speexdsp_sys::preprocess::*;
     use std::convert::From;
     use std::ffi::c_void;

@@ -6,9 +6,8 @@ pub struct State {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Error {
-    Fail,
+    AllocFailed,
     InvalidArg,
-    Overflow,
 }
 
 impl State {
@@ -35,6 +34,10 @@ impl State {
         self.st.get_rate()
     }
 
+    pub fn get_ratio(&self) -> (usize, usize) {
+        self.st.get_ratio()
+    }
+
     pub fn process_float(
         &mut self,
         index: usize,
@@ -48,7 +51,7 @@ impl State {
             .process_float(index as u32, input, &mut in_len, output, &mut out_len);
 
         if ret != 0 {
-            Err(Error::Fail)
+            Err(Error::AllocFailed)
         } else {
             Ok((in_len as usize, out_len as usize))
         }
