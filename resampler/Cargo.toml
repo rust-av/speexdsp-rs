@@ -6,7 +6,7 @@ description = "Pure rust port of the speexdsp resampler"
 homepage = "https://github.com/rust-av/speexdsp-rs"
 repository = "https://github.com/rust-av/speexdsp-rs"
 keywords = ["audio", "resampler"]
-license = "BSD-3"
+license = "BSD-3-Clause"
 readme = "README.md"
 edition = "2018"
 
