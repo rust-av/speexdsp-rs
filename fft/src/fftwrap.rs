@@ -13,6 +13,8 @@ use std::{
     os::raw::{c_char, c_double, c_float, c_int, c_long, c_schar, c_ulong, c_ushort},
 };
 
+use crate::smallft::*;
+
 extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
@@ -25,14 +27,6 @@ extern "C" {
     fn calloc(_: c_ulong, _: c_ulong) -> *mut c_void;
     #[no_mangle]
     fn free(__ptr: *mut c_void);
-    #[no_mangle]
-    fn spx_drft_forward(l: *mut drft_lookup, data: *mut c_float);
-    #[no_mangle]
-    fn spx_drft_backward(l: *mut drft_lookup, data: *mut c_float);
-    #[no_mangle]
-    fn spx_drft_init(l: *mut drft_lookup, n: c_int);
-    #[no_mangle]
-    fn spx_drft_clear(l: *mut drft_lookup);
 }
 pub type __off_t = c_long;
 pub type __off64_t = c_long;
@@ -71,34 +65,7 @@ pub struct _IO_FILE {
 }
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
-/* *******************************************************************
-*                                                                  *
-* THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
-* USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
-* GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
-* IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
-*                                                                  *
-* THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2001             *
-* by the XIPHOPHORUS Company http://www.xiph.org/                  *
-*                                                                  *
-********************************************************************
 
-function: fft transform
-last mod: $Id: smallft.h,v 1.3 2003/09/16 18:35:45 jm Exp $
-
-********************************************************************/
-/* *
-   @file smallft.h
-   @brief Discrete Rotational Fourier Transform (DRFT)
-*/
-/* * Discrete Rotational Fourier Transform lookup */
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct drft_lookup {
-    pub n: c_int,
-    pub trigcache: *mut c_float,
-    pub splitcache: *mut c_int,
-}
 /* Copyright (C) 2007 Jean-Marc Valin
 
    File: os_support.h
