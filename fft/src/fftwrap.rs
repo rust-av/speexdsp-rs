@@ -10,15 +10,12 @@
 
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_double, c_float, c_int, c_long, c_schar, c_ulong, c_ushort},
+    os::raw::{c_double, c_float, c_int, c_ulong},
 };
 
 use crate::smallft::*;
 
 extern "C" {
-    pub type _IO_wide_data;
-    pub type _IO_codecvt;
-    pub type _IO_marker;
     #[no_mangle]
     fn calloc(_: c_ulong, _: c_ulong) -> *mut c_void;
     #[no_mangle]
