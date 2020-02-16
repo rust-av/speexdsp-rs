@@ -20,52 +20,10 @@ extern "C" {
     pub type _IO_codecvt;
     pub type _IO_marker;
     #[no_mangle]
-    static mut stderr: *mut FILE;
-    #[no_mangle]
-    fn fprintf(_: *mut FILE, _: *const c_char, _: ...) -> c_int;
-    #[no_mangle]
     fn calloc(_: c_ulong, _: c_ulong) -> *mut c_void;
     #[no_mangle]
     fn free(__ptr: *mut c_void);
 }
-pub type __off_t = c_long;
-pub type __off64_t = c_long;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct _IO_FILE {
-    pub _flags: c_int,
-    pub _IO_read_ptr: *mut c_char,
-    pub _IO_read_end: *mut c_char,
-    pub _IO_read_base: *mut c_char,
-    pub _IO_write_base: *mut c_char,
-    pub _IO_write_ptr: *mut c_char,
-    pub _IO_write_end: *mut c_char,
-    pub _IO_buf_base: *mut c_char,
-    pub _IO_buf_end: *mut c_char,
-    pub _IO_save_base: *mut c_char,
-    pub _IO_backup_base: *mut c_char,
-    pub _IO_save_end: *mut c_char,
-    pub _markers: *mut _IO_marker,
-    pub _chain: *mut _IO_FILE,
-    pub _fileno: c_int,
-    pub _flags2: c_int,
-    pub _old_offset: __off_t,
-    pub _cur_column: c_ushort,
-    pub _vtable_offset: c_schar,
-    pub _shortbuf: [c_char; 1],
-    pub _lock: *mut c_void,
-    pub _offset: __off64_t,
-    pub _codecvt: *mut _IO_codecvt,
-    pub _wide_data: *mut _IO_wide_data,
-    pub _freeres_list: *mut _IO_FILE,
-    pub _freeres_buf: *mut c_void,
-    pub __pad5: c_int,
-    pub _mode: c_int,
-    pub _unused2: c_char,
-}
-pub type _IO_lock_t = ();
-pub type FILE = _IO_FILE;
-
 /* Copyright (C) 2007 Jean-Marc Valin
 
    File: os_support.h
@@ -111,14 +69,6 @@ unsafe extern "C" fn speex_alloc(mut size: c_int) -> *mut c_void {
 #[inline]
 unsafe extern "C" fn speex_free(mut ptr: *mut c_void) {
     free(ptr);
-}
-#[inline]
-unsafe extern "C" fn speex_warning(mut str: *const c_char) {
-    fprintf(
-        stderr,
-        b"warning: %s\n\x00" as *const u8 as *const c_char,
-        str,
-    );
 }
 /* Copyright (C) 2005-2006 Jean-Marc Valin
    File: fftwrap.c
@@ -175,7 +125,7 @@ pub unsafe extern "C" fn spx_fft(
     if in_0 == out {
         let mut i: c_int = 0;
         let mut scale: c_float = (1.0f64 / (*(table as *mut drft_lookup)).n as c_double) as c_float;
-        speex_warning(b"FFT should not be done in-place\x00" as *const u8 as *const c_char);
+        eprintln!("FFT should not be done in-place");
         i = 0 as c_int;
         while i < (*(table as *mut drft_lookup)).n {
             *out.offset(i as isize) = scale * *in_0.offset(i as isize);
@@ -200,7 +150,7 @@ pub unsafe extern "C" fn spx_ifft(
     mut out: *mut c_float,
 ) {
     if in_0 == out {
-        speex_warning(b"FFT should not be done in-place\x00" as *const u8 as *const c_char);
+        eprintln!("FFT should not be done in-place");
     } else {
         let mut i: c_int = 0;
         i = 0 as c_int;
