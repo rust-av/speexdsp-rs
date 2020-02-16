@@ -59,21 +59,21 @@ pub struct _IO_FILE {
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
 /* *******************************************************************
- *                                                                  *
- * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
- * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
- * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
- * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
- *                                                                  *
- * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2001             *
- * by the XIPHOPHORUS Company http://www.xiph.org/                  *
- *                                                                  *
- ********************************************************************
+*                                                                  *
+* THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+* USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+* GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+* IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+*                                                                  *
+* THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2001             *
+* by the XIPHOPHORUS Company http://www.xiph.org/                  *
+*                                                                  *
+********************************************************************
 
- function: fft transform
- last mod: $Id: smallft.h,v 1.3 2003/09/16 18:35:45 jm Exp $
+function: fft transform
+last mod: $Id: smallft.h,v 1.3 2003/09/16 18:35:45 jm Exp $
 
- ********************************************************************/
+********************************************************************/
 /* *
    @file smallft.h
    @brief Discrete Rotational Fourier Transform (DRFT)
@@ -119,21 +119,26 @@ pub struct drft_lookup {
    POSSIBILITY OF SUCH DAMAGE.
 */
 /* * Speex wrapper for calloc. To do your own dynamic allocation, all you need to do is replace this function, speex_realloc and speex_free
-    NOTE: speex_alloc needs to CLEAR THE MEMORY */
+NOTE: speex_alloc needs to CLEAR THE MEMORY */
 #[inline]
 unsafe extern "C" fn speex_alloc(mut size: libc::c_int) -> *mut libc::c_void {
     /* WARNING: this is not equivalent to malloc(). If you want to use malloc()
-      or your own allocator, YOU NEED TO CLEAR THE MEMORY ALLOCATED. Otherwise
-      you will experience strange bugs */
+    or your own allocator, YOU NEED TO CLEAR THE MEMORY ALLOCATED. Otherwise
+    you will experience strange bugs */
     return calloc(size as libc::c_ulong, 1 as libc::c_int as libc::c_ulong);
 }
 /* * Speex wrapper for calloc. To do your own dynamic allocation, all you need to do is replace this function, speex_realloc and speex_alloc */
 #[inline]
-unsafe extern "C" fn speex_free(mut ptr: *mut libc::c_void) { free(ptr); }
+unsafe extern "C" fn speex_free(mut ptr: *mut libc::c_void) {
+    free(ptr);
+}
 #[inline]
 unsafe extern "C" fn speex_warning(mut str: *const libc::c_char) {
-    fprintf(stderr, b"warning: %s\n\x00" as *const u8 as *const libc::c_char,
-            str);
+    fprintf(
+        stderr,
+        b"warning: %s\n\x00" as *const u8 as *const libc::c_char,
+        str,
+    );
 }
 /* Copyright (C) 2005-2006 Jean-Marc Valin
    File: fftwrap.c
@@ -169,12 +174,10 @@ unsafe extern "C" fn speex_warning(mut str: *const libc::c_char) {
 
 */
 #[no_mangle]
-pub unsafe extern "C" fn spx_fft_init(mut size: libc::c_int)
- -> *mut libc::c_void {
+pub unsafe extern "C" fn spx_fft_init(mut size: libc::c_int) -> *mut libc::c_void {
     let mut table: *mut drft_lookup = 0 as *mut drft_lookup;
-    table =
-        speex_alloc(::std::mem::size_of::<drft_lookup>() as libc::c_ulong as
-                        libc::c_int) as *mut drft_lookup;
+    table = speex_alloc(::std::mem::size_of::<drft_lookup>() as libc::c_ulong as libc::c_int)
+        as *mut drft_lookup;
     spx_drft_init(table, size);
     return table as *mut libc::c_void;
 }
@@ -184,16 +187,16 @@ pub unsafe extern "C" fn spx_fft_destroy(mut table: *mut libc::c_void) {
     speex_free(table);
 }
 #[no_mangle]
-pub unsafe extern "C" fn spx_fft(mut table: *mut libc::c_void,
-                                 mut in_0: *mut libc::c_float,
-                                 mut out: *mut libc::c_float) {
+pub unsafe extern "C" fn spx_fft(
+    mut table: *mut libc::c_void,
+    mut in_0: *mut libc::c_float,
+    mut out: *mut libc::c_float,
+) {
     if in_0 == out {
         let mut i: libc::c_int = 0;
         let mut scale: libc::c_float =
-            (1.0f64 / (*(table as *mut drft_lookup)).n as libc::c_double) as
-                libc::c_float;
-        speex_warning(b"FFT should not be done in-place\x00" as *const u8 as
-                          *const libc::c_char);
+            (1.0f64 / (*(table as *mut drft_lookup)).n as libc::c_double) as libc::c_float;
+        speex_warning(b"FFT should not be done in-place\x00" as *const u8 as *const libc::c_char);
         i = 0 as libc::c_int;
         while i < (*(table as *mut drft_lookup)).n {
             *out.offset(i as isize) = scale * *in_0.offset(i as isize);
@@ -202,8 +205,7 @@ pub unsafe extern "C" fn spx_fft(mut table: *mut libc::c_void,
     } else {
         let mut i_0: libc::c_int = 0;
         let mut scale_0: libc::c_float =
-            (1.0f64 / (*(table as *mut drft_lookup)).n as libc::c_double) as
-                libc::c_float;
+            (1.0f64 / (*(table as *mut drft_lookup)).n as libc::c_double) as libc::c_float;
         i_0 = 0 as libc::c_int;
         while i_0 < (*(table as *mut drft_lookup)).n {
             *out.offset(i_0 as isize) = scale_0 * *in_0.offset(i_0 as isize);
@@ -213,12 +215,13 @@ pub unsafe extern "C" fn spx_fft(mut table: *mut libc::c_void,
     spx_drft_forward(table as *mut drft_lookup, out);
 }
 #[no_mangle]
-pub unsafe extern "C" fn spx_ifft(mut table: *mut libc::c_void,
-                                  mut in_0: *mut libc::c_float,
-                                  mut out: *mut libc::c_float) {
+pub unsafe extern "C" fn spx_ifft(
+    mut table: *mut libc::c_void,
+    mut in_0: *mut libc::c_float,
+    mut out: *mut libc::c_float,
+) {
     if in_0 == out {
-        speex_warning(b"FFT should not be done in-place\x00" as *const u8 as
-                          *const libc::c_char);
+        speex_warning(b"FFT should not be done in-place\x00" as *const u8 as *const libc::c_char);
     } else {
         let mut i: libc::c_int = 0;
         i = 0 as libc::c_int;
@@ -230,14 +233,18 @@ pub unsafe extern "C" fn spx_ifft(mut table: *mut libc::c_void,
     spx_drft_backward(table as *mut drft_lookup, out);
 }
 #[no_mangle]
-pub unsafe extern "C" fn spx_fft_float(mut table: *mut libc::c_void,
-                                       mut in_0: *mut libc::c_float,
-                                       mut out: *mut libc::c_float) {
+pub unsafe extern "C" fn spx_fft_float(
+    mut table: *mut libc::c_void,
+    mut in_0: *mut libc::c_float,
+    mut out: *mut libc::c_float,
+) {
     spx_fft(table, in_0, out);
 }
 #[no_mangle]
-pub unsafe extern "C" fn spx_ifft_float(mut table: *mut libc::c_void,
-                                        mut in_0: *mut libc::c_float,
-                                        mut out: *mut libc::c_float) {
+pub unsafe extern "C" fn spx_ifft_float(
+    mut table: *mut libc::c_void,
+    mut in_0: *mut libc::c_float,
+    mut out: *mut libc::c_float,
+) {
     spx_ifft(table, in_0, out);
 }
