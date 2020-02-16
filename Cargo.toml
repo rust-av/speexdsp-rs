@@ -25,4 +25,4 @@ speexdsp-sys = { version = "0.1.1", path = "speexdsp-sys", optional = true }
 speexdsp-resampler = { version = "0.1", path = "resampler" }
 
 [workspace]
-members = ["speexdsp-sys", "resampler"]
+members = ["speexdsp-sys", "resampler", "fft"]
