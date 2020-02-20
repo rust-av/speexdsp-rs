@@ -15,10 +15,6 @@ use std::{
 
 extern "C" {
     #[no_mangle]
-    fn cos(_: c_double) -> c_double;
-    #[no_mangle]
-    fn sin(_: c_double) -> c_double;
-    #[no_mangle]
     fn calloc(_: c_ulong, _: c_ulong) -> *mut c_void;
     #[no_mangle]
     fn free(__ptr: *mut c_void);
@@ -172,10 +168,10 @@ unsafe extern "C" fn drfti1(mut n: c_int, mut wa: *mut c_float, mut ifac: *mut c
                 arg = fi * argld;
                 let fresh0 = i;
                 i = i + 1;
-                *wa.offset(fresh0 as isize) = cos(arg as c_double) as c_float;
+                *wa.offset(fresh0 as isize) = f64::cos(arg as c_double) as c_float;
                 let fresh1 = i;
                 i = i + 1;
-                *wa.offset(fresh1 as isize) = sin(arg as c_double) as c_float;
+                *wa.offset(fresh1 as isize) = f64::sin(arg as c_double) as c_float;
                 ii += 2 as c_int
             }
             is += ido;
@@ -462,8 +458,8 @@ unsafe extern "C" fn dradfg(
     let mut idp2: c_int = 0;
     let mut ipp2: c_int = 0;
     arg = tpi / ip as c_float;
-    dcp = cos(arg as c_double) as c_float;
-    dsp = sin(arg as c_double) as c_float;
+    dcp = f64::cos(arg as c_double) as c_float;
+    dsp = f64::sin(arg as c_double) as c_float;
     ipph = ip + 1 as c_int >> 1 as c_int;
     ipp2 = ip;
     idp2 = ido;
@@ -1359,8 +1355,8 @@ unsafe extern "C" fn dradbg(
     t10 = ip * ido;
     t0 = l1 * ido;
     arg = tpi / ip as c_float;
-    dcp = cos(arg as c_double) as c_float;
-    dsp = sin(arg as c_double) as c_float;
+    dcp = f64::cos(arg as c_double) as c_float;
+    dsp = f64::sin(arg as c_double) as c_float;
     nbd = ido - 1 as c_int >> 1 as c_int;
     ipp2 = ip;
     ipph = ip + 1 as c_int >> 1 as c_int;
