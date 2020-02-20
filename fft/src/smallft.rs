@@ -2130,7 +2130,7 @@ mod tests {
         const EPSILON: c_float = 1e-6;
 
         let mut trigcache = [0. as c_float; SIZE * 3];
-        let mut splitcache = [0 as c_int; SIZE * 32];
+        let mut splitcache = [0 as c_int; 32];
 
         unsafe {
             super::fdrffti(
