@@ -48,9 +48,9 @@ impl drft_lookup {
         };
         unsafe {
             fdrffti(
-                n as c_int,
-                l.trigcache.as_mut_ptr(),
-                l.splitcache.as_mut_ptr(),
+                n,
+                &mut l.trigcache,
+                &mut l.splitcache,
             );
         }
 
@@ -86,9 +86,15 @@ last mod: $Id: smallft.c,v 1.19 2003/10/08 05:12:37 jm Exp $
  * it follows R_0, R_1, I_1, R_2, I_2 ... R_n-1, I_n-1, I_n like the
  * FORTRAN version
  */
-unsafe extern "C" fn drfti1(mut n: c_int, mut wa: *mut c_float, mut ifac: *mut c_int) {
+unsafe extern "C" fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
+
     static mut ntryh: [c_int; 4] = [4 as c_int, 2 as c_int, 3 as c_int, 5 as c_int];
     static mut tpi: c_float = 6.28318530717958648f32;
+
+    let mut n = wa.len() as i32;
+    let mut wa = wa.as_mut_ptr();
+    let mut ifac = ifac.as_mut_ptr();
+
     let mut arg: c_float = 0.;
     let mut argh: c_float = 0.;
     let mut argld: c_float = 0.;
@@ -184,11 +190,11 @@ unsafe extern "C" fn drfti1(mut n: c_int, mut wa: *mut c_float, mut ifac: *mut c
         k1 += 1
     }
 }
-unsafe extern "C" fn fdrffti(mut n: c_int, mut wsave: *mut c_float, mut ifac: *mut c_int) {
-    if n == 1 as c_int {
+unsafe extern "C" fn fdrffti(n: usize, wsave: &mut [f32], mut ifac: &mut [i32]) {
+    if n == 1 {
         return;
     }
-    drfti1(n, wsave.offset(n as isize), ifac);
+    drfti1(&mut wsave[n .. n * 2], ifac);
 }
 unsafe extern "C" fn dradf2(
     mut ido: c_int,
@@ -1964,7 +1970,7 @@ mod tests {
         let mut splitcache = [24 as c_int; 32];
 
         unsafe {
-            super::fdrffti(1, trigcache.as_mut_ptr(), splitcache.as_mut_ptr());
+            super::fdrffti(1, &mut trigcache, &mut splitcache);
         }
         assert!(trigcache.iter().all(|&x| x == 42.));
         assert!(splitcache.iter().all(|&x| x == 24));
@@ -2128,9 +2134,9 @@ mod tests {
 
         unsafe {
             super::fdrffti(
-                SIZE as c_int,
-                trigcache.as_mut_ptr(),
-                splitcache.as_mut_ptr(),
+                SIZE,
+                &mut trigcache,
+                &mut splitcache,
             );
         }
 
