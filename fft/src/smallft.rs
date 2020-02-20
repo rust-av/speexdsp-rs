@@ -8,17 +8,8 @@
     unused_mut
 )]
 
-use std::{
-    ffi::c_void,
-    os::raw::{c_double, c_float, c_int, c_ulong},
-};
+use std::os::raw::{c_double, c_float, c_int};
 
-extern "C" {
-    #[no_mangle]
-    fn calloc(_: c_ulong, _: c_ulong) -> *mut c_void;
-    #[no_mangle]
-    fn free(__ptr: *mut c_void);
-}
 /* *******************************************************************
 *                                                                  *
 * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
@@ -40,21 +31,33 @@ last mod: $Id: smallft.h,v 1.3 2003/09/16 18:35:45 jm Exp $
    @brief Discrete Rotational Fourier Transform (DRFT)
 */
 /* * Discrete Rotational Fourier Transform lookup */
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 #[repr(C)]
 pub struct drft_lookup {
     pub n: c_int,
-    pub trigcache: *mut c_float,
-    pub splitcache: *mut c_int,
+    pub trigcache: Vec<f32>,
+    pub splitcache: Vec<i32>,
 }
-#[inline]
-unsafe extern "C" fn speex_alloc(mut size: c_int) -> *mut c_void {
-    return calloc(size as c_ulong, 1 as c_int as c_ulong);
+
+impl drft_lookup {
+    pub fn new(n: usize) -> Self {
+        let mut l = Self {
+            n: n as c_int,
+            trigcache: vec![0.0; 3 * (n as usize)],
+            splitcache: vec![0; 32],
+        };
+        unsafe {
+            fdrffti(
+                n as c_int,
+                l.trigcache.as_mut_ptr(),
+                l.splitcache.as_mut_ptr(),
+            );
+        }
+
+        l
+    }
 }
-#[inline]
-unsafe extern "C" fn speex_free(mut ptr: *mut c_void) {
-    free(ptr);
-}
+
 /* *******************************************************************
 *                                                                  *
 * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
@@ -1932,9 +1935,9 @@ pub unsafe extern "C" fn spx_drft_forward(mut l: *mut drft_lookup, mut data: *mu
     drftf1(
         (*l).n,
         data,
-        (*l).trigcache,
-        (*l).trigcache.offset((*l).n as isize),
-        (*l).splitcache,
+        (*l).trigcache.as_mut_ptr(),
+        (*l).trigcache.as_mut_ptr().offset((*l).n as isize),
+        (*l).splitcache.as_mut_ptr(),
     );
 }
 #[no_mangle]
@@ -1945,33 +1948,10 @@ pub unsafe extern "C" fn spx_drft_backward(mut l: *mut drft_lookup, mut data: *m
     drftb1(
         (*l).n,
         data,
-        (*l).trigcache,
-        (*l).trigcache.offset((*l).n as isize),
-        (*l).splitcache,
+        (*l).trigcache.as_mut_ptr(),
+        (*l).trigcache.as_mut_ptr().offset((*l).n as isize),
+        (*l).splitcache.as_mut_ptr(),
     );
-}
-#[no_mangle]
-pub unsafe extern "C" fn spx_drft_init(mut l: *mut drft_lookup, mut n: c_int) {
-    (*l).n = n;
-    (*l).trigcache = speex_alloc(
-        ((3 as c_int * n) as c_ulong).wrapping_mul(::std::mem::size_of::<c_float>() as c_ulong)
-            as c_int,
-    ) as *mut c_float;
-    (*l).splitcache = speex_alloc(
-        (32 as c_int as c_ulong).wrapping_mul(::std::mem::size_of::<c_int>() as c_ulong) as c_int,
-    ) as *mut c_int;
-    fdrffti(n, (*l).trigcache, (*l).splitcache);
-}
-#[no_mangle]
-pub unsafe extern "C" fn spx_drft_clear(mut l: *mut drft_lookup) {
-    if !l.is_null() {
-        if !(*l).trigcache.is_null() {
-            speex_free((*l).trigcache as *mut c_void);
-        }
-        if !(*l).splitcache.is_null() {
-            speex_free((*l).splitcache as *mut c_void);
-        }
-    };
 }
 
 #[cfg(test)]
