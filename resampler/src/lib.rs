@@ -17,12 +17,18 @@ impl State {
         out_rate: usize,
         quality: usize,
     ) -> Result<Self, Error> {
-        let st = speex::SpeexResamplerState::new(channels, in_rate, out_rate, quality);
+        let st = speex::SpeexResamplerState::new(
+            channels, in_rate, out_rate, quality,
+        );
 
         Ok(State { st })
     }
 
-    pub fn set_rate(&mut self, in_rate: usize, out_rate: usize) -> Result<(), Error> {
+    pub fn set_rate(
+        &mut self,
+        in_rate: usize,
+        out_rate: usize,
+    ) -> Result<(), Error> {
         if self.st.set_rate(in_rate, out_rate) != 0 {
             Err(Error::InvalidArg)
         } else {
@@ -46,9 +52,13 @@ impl State {
     ) -> Result<(usize, usize), Error> {
         let mut in_len = input.len() as u32;
         let mut out_len = output.len() as u32;
-        let ret = self
-            .st
-            .process_float(index as u32, input, &mut in_len, output, &mut out_len);
+        let ret = self.st.process_float(
+            index as u32,
+            input,
+            &mut in_len,
+            output,
+            &mut out_len,
+        );
 
         if ret != 0 {
             Err(Error::AllocFailed)

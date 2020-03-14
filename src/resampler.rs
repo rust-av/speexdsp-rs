@@ -24,8 +24,17 @@ impl fmt::Display for Error {
 }
 
 pub trait Resampler: Sized {
-    fn new(channels: usize, in_rate: usize, out_rate: usize, quality: usize) -> Result<Self, Error>;
-    fn set_rate(&mut self, in_rate: usize, out_rate: usize) -> Result<(), Error>;
+    fn new(
+        channels: usize,
+        in_rate: usize,
+        out_rate: usize,
+        quality: usize,
+    ) -> Result<Self, Error>;
+    fn set_rate(
+        &mut self,
+        in_rate: usize,
+        out_rate: usize,
+    ) -> Result<(), Error>;
     fn get_rate(&self) -> (usize, usize);
     fn get_ratio(&self) -> (usize, usize);
     fn process_float(
@@ -89,8 +98,18 @@ mod sys {
             }
         }
 
-        fn set_rate(&mut self, in_rate: usize, out_rate: usize) -> Result<(), Error> {
-            let ret = unsafe { speex_resampler_set_rate(self.st, in_rate as u32, out_rate as u32) };
+        fn set_rate(
+            &mut self,
+            in_rate: usize,
+            out_rate: usize,
+        ) -> Result<(), Error> {
+            let ret = unsafe {
+                speex_resampler_set_rate(
+                    self.st,
+                    in_rate as u32,
+                    out_rate as u32,
+                )
+            };
             if ret != 0 {
                 Err(ret.into())
             } else {
@@ -102,7 +121,9 @@ mod sys {
             let mut in_rate = 0;
             let mut out_rate = 0;
 
-            unsafe { speex_resampler_get_rate(self.st, &mut in_rate, &mut out_rate) };
+            unsafe {
+                speex_resampler_get_rate(self.st, &mut in_rate, &mut out_rate)
+            };
 
             (in_rate as usize, out_rate as usize)
         }
@@ -159,7 +180,9 @@ mod sys {
         }
 
         fn set_quality(&mut self, quality: usize) -> Result<(), Error> {
-            let ret = unsafe { speex_resampler_set_quality(self.st, quality as i32) };
+            let ret = unsafe {
+                speex_resampler_set_quality(self.st, quality as i32)
+            };
             if ret != 0 {
                 Err(ret.into())
             } else {
@@ -182,8 +205,8 @@ mod sys {
 }
 
 pub mod native {
+    use super::{Error, Resampler};
     pub use speexdsp_resampler::State;
-    use super::{Resampler, Error};
 
     impl From<speexdsp_resampler::Error> for Error {
         fn from(v: speexdsp_resampler::Error) -> Error {
@@ -204,7 +227,11 @@ pub mod native {
             State::new(channels, in_rate, out_rate, quality)
                 .map_err(|e| e.into())
         }
-        fn set_rate(&mut self, in_rate: usize, out_rate: usize) -> Result<(), Error> {
+        fn set_rate(
+            &mut self,
+            in_rate: usize,
+            out_rate: usize,
+        ) -> Result<(), Error> {
             State::set_rate(self, in_rate, out_rate).map_err(|e| e.into())
         }
         fn get_rate(&self) -> (usize, usize) {

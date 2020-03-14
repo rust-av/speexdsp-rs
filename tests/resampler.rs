@@ -3,9 +3,9 @@ mod comparison {
     use assert_approx_eq::assert_approx_eq;
     use interpolate_name::interpolate_test;
 
-    use speexdsp::resampler::Resampler;
     use speexdsp::resampler as sys;
-    use speexdsp::resampler::native as native;
+    use speexdsp::resampler::native;
+    use speexdsp::resampler::Resampler;
 
     use std::f32::consts::PI;
 
@@ -54,14 +54,20 @@ mod comparison {
             let prev_in_len = in_len;
             let prev_out_len = out_len;
 
-            let (in_len_native, out_len_native) = st_native.process_float(
-                0,
-                &fin[off..off + in_len],
-                &mut fout_native[..out_len],
-            ).unwrap();
+            let (in_len_native, out_len_native) = st_native
+                .process_float(
+                    0,
+                    &fin[off..off + in_len],
+                    &mut fout_native[..out_len],
+                )
+                .unwrap();
 
             let (in_len, out_len) = st
-                .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
+                .process_float(
+                    0,
+                    &fin[off..off + in_len],
+                    &mut fout[..out_len],
+                )
                 .unwrap();
 
             eprintln!(

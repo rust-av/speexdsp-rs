@@ -70,7 +70,8 @@ pub unsafe extern "C" fn spx_fft(
 ) {
     if in_0 == out {
         let mut i: c_int = 0;
-        let mut scale: c_float = (1.0f64 / (*(table as *mut drft_lookup)).n as c_double) as c_float;
+        let mut scale: c_float =
+            (1.0f64 / (*(table as *mut drft_lookup)).n as c_double) as c_float;
         eprintln!("FFT should not be done in-place");
         i = 0 as c_int;
         while i < (*(table as *mut drft_lookup)).n {

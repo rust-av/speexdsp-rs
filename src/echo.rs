@@ -195,7 +195,6 @@ mod sys {
             unsafe { speex_decorrelate_destroy(self.st) };
         }
     }
-
 }
 
 #[cfg(feature = "sys")]
