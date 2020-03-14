@@ -36,7 +36,7 @@ mod comparison {
 
         let mut st = sys::State::new(1, RATE, init_rate, 4).unwrap();
 
-        let mut st_native = sys::State::new(1, RATE, init_rate, 4).unwrap();
+        let mut st_native = native::State::new(1, RATE, init_rate, 4).unwrap();
 
         st.set_rate(RATE, start_rate);
         st.skip_zeros();
