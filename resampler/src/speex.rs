@@ -139,8 +139,20 @@ impl SpeexResamplerState {
      * and 10 has very high quality.
      * @return newly created resampler state
      */
-    pub fn new(nb_channels: usize, in_rate: usize, out_rate: usize, quality: usize) -> Self {
-        Self::init_frac(nb_channels, in_rate, out_rate, in_rate, out_rate, quality)
+    pub fn new(
+        nb_channels: usize,
+        in_rate: usize,
+        out_rate: usize,
+        quality: usize,
+    ) -> Self {
+        Self::init_frac(
+            nb_channels,
+            in_rate,
+            out_rate,
+            in_rate,
+            out_rate,
+            quality,
+        )
     }
 
     /* * Create a new resampler with fractional input/output rates. The sampling
@@ -164,7 +176,8 @@ impl SpeexResamplerState {
         out_rate: usize,
         quality: usize,
     ) -> Self {
-        if nb_channels == 0 || ratio_num == 0 || ratio_den == 0 || quality > 10 {
+        if nb_channels == 0 || ratio_num == 0 || ratio_den == 0 || quality > 10
+        {
             panic!("Set the correct parameters!");
         }
         let mut st = Self {
@@ -242,13 +255,18 @@ impl SpeexResamplerState {
                 let mem_slice = &mut self.mem[mem_idx..];
                 let mem_iter = mem_slice.iter_mut();
                 let in_iter = in_0.iter().step_by(istride);
-                mem_iter
-                    .zip(in_iter)
-                    .take(ichunk as usize)
-                    .for_each(|(x, &y)| {
+                mem_iter.zip(in_iter).take(ichunk as usize).for_each(
+                    |(x, &y)| {
                         *x = y;
-                    });
-                speex_resampler_process_native(self, channel_index, &mut ichunk, out, &mut ochunk);
+                    },
+                );
+                speex_resampler_process_native(
+                    self,
+                    channel_index,
+                    &mut ichunk,
+                    out,
+                    &mut ochunk,
+                );
                 ilen -= ichunk;
                 olen -= ochunk;
                 out = &mut out[(ochunk * self.out_stride) as usize..][..];
@@ -313,7 +331,9 @@ impl SpeexResamplerState {
             if 0 == self.magic_samples[channel_index as usize] {
                 j = 0u32;
                 while j < ichunk {
-                    self.mem[mem_idx + j as usize + (self.filt_len - 1) as usize] =
+                    self.mem[mem_idx
+                        + j as usize
+                        + (self.filt_len - 1) as usize] =
                         in_0[(j * istride_save) as usize] as f32;
                     j += 1
                 }
@@ -330,13 +350,14 @@ impl SpeexResamplerState {
             }
             j = 0u32;
             while j < ochunk + omagic {
-                out[(j * ostride_save) as usize] = (if yselfack[j as usize] < -32767.5 {
-                    -32768
-                } else if yselfack[j as usize] > 32766.5 {
-                    32767
-                } else {
-                    (0.5 + yselfack[j as usize]).floor() as i32
-                }) as i16;
+                out[(j * ostride_save) as usize] =
+                    (if yselfack[j as usize] < -32767.5 {
+                        -32768
+                    } else if yselfack[j as usize] > 32766.5 {
+                        32767
+                    } else {
+                        (0.5 + yselfack[j as usize]).floor() as i32
+                    }) as i16;
                 j += 1
             }
             ilen -= ichunk;
@@ -384,7 +405,13 @@ impl SpeexResamplerState {
         for i in 0..self.nb_channels as usize {
             *out_len = bak_out_len;
             *in_len = bak_in_len;
-            self.process_float(i as u32, &in_0[i..], in_len, &mut out[i..], out_len);
+            self.process_float(
+                i as u32,
+                &in_0[i..],
+                in_len,
+                &mut out[i..],
+                out_len,
+            );
         }
         self.in_stride = istride_save;
         self.out_stride = ostride_save;
@@ -425,7 +452,13 @@ impl SpeexResamplerState {
         for i in 0..self.nb_channels as usize {
             *out_len = bak_out_len;
             *in_len = bak_in_len;
-            self.process_int(i as u32, &in_0[i..], in_len, &mut out[i..], out_len);
+            self.process_int(
+                i as u32,
+                &in_0[i..],
+                in_len,
+                &mut out[i..],
+                out_len,
+            );
         }
         self.in_stride = istride_save;
         self.out_stride = ostride_save;
@@ -585,7 +618,8 @@ impl SpeexResamplerState {
      * @param st Resampler state
      */
     pub fn get_output_latency(&self) -> usize {
-        (((self.filt_len / 2) * self.den_rate + (self.num_rate >> 1)) / self.num_rate) as usize
+        (((self.filt_len / 2) * self.den_rate + (self.num_rate >> 1))
+            / self.num_rate) as usize
     }
 
     /* * Make sure that the first samples to go out of the resamplers don't have
@@ -665,7 +699,8 @@ impl SpeexResamplerState {
             .for_each(|(i, x)| {
                 *x = sinc(
                     cutoff,
-                    (i as i32 - 4) as f32 / oversample as f32 - filt_len as f32 / 2.0,
+                    (i as i32 - 4) as f32 / oversample as f32
+                        - filt_len as f32 / 2.0,
                     filt_len as i32,
                     QUALITY_MAP[quality].window_func,
                 )
@@ -678,7 +713,12 @@ impl SpeexResamplerState {
     }
 
     #[inline(always)]
-    fn chunks_iterator(&mut self, old_length: u32, alloc_size: usize, algo: usize) {
+    fn chunks_iterator(
+        &mut self,
+        old_length: u32,
+        alloc_size: usize,
+        algo: usize,
+    ) {
         let mem_copy = self.mem.clone();
 
         let mut_mem = self.mem.chunks_mut(self.mem_alloc_size as usize);
@@ -716,8 +756,11 @@ impl SpeexResamplerState {
             self.cutoff = QUALITY_MAP[quality].upsample_bandwidth;
         }
 
-        let use_direct = self.filt_len * self.den_rate <= self.filt_len * self.oversample + 8
-            && 2147483647 as u64 / ::std::mem::size_of::<f32>() as u64 / self.den_rate as u64
+        let use_direct = self.filt_len * self.den_rate
+            <= self.filt_len * self.oversample + 8
+            && 2147483647 as u64
+                / ::std::mem::size_of::<f32>() as u64
+                / self.den_rate as u64
                 >= self.filt_len as u64;
 
         let mut min_sinc_table_length = self.filt_len * self.den_rate;
@@ -810,16 +853,16 @@ fn resampler_basic_interpolate_single(
     while !(last_sample >= *in_len || out_sample >= *out_len) {
         let iptr = &in_0[last_sample as usize..];
         let offset = samp_frac_num * oversample / den_rate;
-        let frac = ((samp_frac_num * oversample) % den_rate) as f32 / den_rate as f32;
+        let frac =
+            ((samp_frac_num * oversample) % den_rate) as f32 / den_rate as f32;
         let mut accum: [f32; 4] = [0.; 4];
         iptr.iter().zip(0..n).for_each(|(&curr_in, j)| {
             let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
-            accum
-                .iter_mut()
-                .zip(sinc_table.iter().skip(idx))
-                .for_each(|(v, &s)| {
+            accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
+                |(v, &s)| {
                     *v += curr_in * s;
-                });
+                },
+            );
         });
         let mut interp: [f32; 4] = [0.; 4];
         cubic_coef(frac, &mut interp);
@@ -842,11 +885,14 @@ fn resampler_basic_interpolate_single(
 }
 
 fn cubic_coef(frac: f32, interp: &mut [f32]) {
-    interp[0] = -0.16666999459266663 * frac + 0.16666999459266663 * frac * frac * frac;
+    interp[0] =
+        -0.16666999459266663 * frac + 0.16666999459266663 * frac * frac * frac;
     interp[1] = frac + 0.5 * frac * frac - 0.5f32 * frac * frac * frac;
-    interp[3] =
-        -0.3333300054073334 * frac + 0.5 * frac * frac - 0.16666999459266663 * frac * frac * frac;
-    interp[2] = (1.0f64 - interp[0] as f64 - interp[1] as f64 - interp[3] as f64) as f32;
+    interp[3] = -0.3333300054073334 * frac + 0.5 * frac * frac
+        - 0.16666999459266663 * frac * frac * frac;
+    interp[2] =
+        (1.0f64 - interp[0] as f64 - interp[1] as f64 - interp[3] as f64)
+            as f32;
 }
 
 fn resampler_basic_interpolate_double(
@@ -873,16 +919,16 @@ fn resampler_basic_interpolate_double(
     while !(last_sample >= *in_len || out_sample >= *out_len) {
         let iptr: &[f32] = &in_0[last_sample as usize..];
         let offset = samp_frac_num * st.oversample / st.den_rate;
-        let frac = (samp_frac_num * oversample % den_rate) as f32 / den_rate as f32;
+        let frac =
+            (samp_frac_num * oversample % den_rate) as f32 / den_rate as f32;
         let mut accum: [f64; 4] = [0.0; 4];
         iptr.iter().zip(0..n).for_each(|(&curr_in, j)| {
             let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
-            accum
-                .iter_mut()
-                .zip(sinc_table.iter().skip(idx))
-                .for_each(|(v, &s)| {
+            accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
+                |(v, &s)| {
                     *v += (curr_in * s) as f64;
-                });
+                },
+            );
         });
         let mut interp: [f32; 4] = [0.; 4];
         cubic_coef(frac, &mut interp);
@@ -905,17 +951,83 @@ fn resampler_basic_interpolate_double(
 }
 
 static QUALITY_MAP: [QualityMapping; 11] = [
-    QualityMapping::new(8, 4, 0.8299999833106995, 0.8600000143051148, &_KAISER6),
-    QualityMapping::new(16, 4, 0.8500000238418579, 0.8799999952316284, &_KAISER6),
-    QualityMapping::new(32, 4, 0.8820000290870667, 0.9100000262260437, &_KAISER6),
-    QualityMapping::new(48, 8, 0.8949999809265137, 0.9169999957084656, &_KAISER8),
-    QualityMapping::new(64, 8, 0.9210000038146973, 0.9399999976158142, &_KAISER8),
-    QualityMapping::new(80, 16, 0.921999990940094, 0.9399999976158142, &_KAISER10),
-    QualityMapping::new(96, 16, 0.9399999976158142, 0.9449999928474426, &_KAISER10),
-    QualityMapping::new(128, 16, 0.949999988079071, 0.949999988079071, &_KAISER10),
-    QualityMapping::new(160, 16, 0.9599999785423279, 0.9599999785423279, &_KAISER10),
-    QualityMapping::new(192, 32, 0.9679999947547913, 0.9679999947547913, &_KAISER12),
-    QualityMapping::new(256, 32, 0.9750000238418579, 0.9750000238418579, &_KAISER12),
+    QualityMapping::new(
+        8,
+        4,
+        0.8299999833106995,
+        0.8600000143051148,
+        &_KAISER6,
+    ),
+    QualityMapping::new(
+        16,
+        4,
+        0.8500000238418579,
+        0.8799999952316284,
+        &_KAISER6,
+    ),
+    QualityMapping::new(
+        32,
+        4,
+        0.8820000290870667,
+        0.9100000262260437,
+        &_KAISER6,
+    ),
+    QualityMapping::new(
+        48,
+        8,
+        0.8949999809265137,
+        0.9169999957084656,
+        &_KAISER8,
+    ),
+    QualityMapping::new(
+        64,
+        8,
+        0.9210000038146973,
+        0.9399999976158142,
+        &_KAISER8,
+    ),
+    QualityMapping::new(
+        80,
+        16,
+        0.921999990940094,
+        0.9399999976158142,
+        &_KAISER10,
+    ),
+    QualityMapping::new(
+        96,
+        16,
+        0.9399999976158142,
+        0.9449999928474426,
+        &_KAISER10,
+    ),
+    QualityMapping::new(
+        128,
+        16,
+        0.949999988079071,
+        0.949999988079071,
+        &_KAISER10,
+    ),
+    QualityMapping::new(
+        160,
+        16,
+        0.9599999785423279,
+        0.9599999785423279,
+        &_KAISER10,
+    ),
+    QualityMapping::new(
+        192,
+        32,
+        0.9679999947547913,
+        0.9679999947547913,
+        &_KAISER12,
+    ),
+    QualityMapping::new(
+        256,
+        32,
+        0.9750000238418579,
+        0.9750000238418579,
+        &_KAISER12,
+    ),
 ];
 
 static _KAISER12: FuncDef = FuncDef::new(&KAISER12_TABLE, 64);
@@ -997,10 +1109,11 @@ static _KAISER10: FuncDef = FuncDef::new(&KAISER10_TABLE, 32);
 
 static KAISER10_TABLE: [f64; 36] = {
     [
-        0.99537781, 1.0, 0.99537781, 0.98162644, 0.95908712, 0.92831446, 0.89005583, 0.84522401,
-        0.79486424, 0.74011713, 0.68217934, 0.62226347, 0.56155915, 0.5011968, 0.44221549,
-        0.38553619, 0.33194107, 0.28205962, 0.23636152, 0.19515633, 0.15859932, 0.1267028,
-        0.09935205, 0.07632451, 0.05731132, 0.0419398, 0.02979584, 0.0204451, 0.01345224,
+        0.99537781, 1.0, 0.99537781, 0.98162644, 0.95908712, 0.92831446,
+        0.89005583, 0.84522401, 0.79486424, 0.74011713, 0.68217934,
+        0.62226347, 0.56155915, 0.5011968, 0.44221549, 0.38553619, 0.33194107,
+        0.28205962, 0.23636152, 0.19515633, 0.15859932, 0.1267028, 0.09935205,
+        0.07632451, 0.05731132, 0.0419398, 0.02979584, 0.0204451, 0.01345224,
         0.00839739, 0.00488951, 0.00257636, 0.00115101, 0.00035515, 0.0, 0.0,
     ]
 };
@@ -1009,11 +1122,13 @@ static _KAISER8: FuncDef = FuncDef::new(&KAISER8_TABLE, 32);
 
 static KAISER8_TABLE: [f64; 36] = {
     [
-        0.99635258, 1.0, 0.99635258, 0.98548012, 0.96759014, 0.943022, 0.91223751, 0.87580811,
-        0.83439927, 0.78875245, 0.73966538, 0.68797126, 0.6345175, 0.58014482, 0.52566725,
-        0.47185369, 0.4194115, 0.36897272, 0.32108304, 0.27619388, 0.23465776, 0.1967267,
-        0.1625538, 0.13219758, 0.10562887, 0.08273982, 0.06335451, 0.04724088, 0.03412321,
-        0.0236949, 0.01563093, 0.00959968, 0.00527363, 0.00233883, 0.0005, 0.0,
+        0.99635258, 1.0, 0.99635258, 0.98548012, 0.96759014, 0.943022,
+        0.91223751, 0.87580811, 0.83439927, 0.78875245, 0.73966538,
+        0.68797126, 0.6345175, 0.58014482, 0.52566725, 0.47185369, 0.4194115,
+        0.36897272, 0.32108304, 0.27619388, 0.23465776, 0.1967267, 0.1625538,
+        0.13219758, 0.10562887, 0.08273982, 0.06335451, 0.04724088,
+        0.03412321, 0.0236949, 0.01563093, 0.00959968, 0.00527363, 0.00233883,
+        0.0005, 0.0,
     ]
 };
 
@@ -1021,11 +1136,13 @@ static _KAISER6: FuncDef = FuncDef::new(&KAISER6_TABLE, 32);
 
 static KAISER6_TABLE: [f64; 36] = {
     [
-        0.99733006, 1.0, 0.99733006, 0.98935595, 0.97618418, 0.95799003, 0.93501423, 0.90755855,
-        0.87598009, 0.84068475, 0.80211977, 0.76076565, 0.71712752, 0.67172623, 0.62508937,
-        0.57774224, 0.53019925, 0.48295561, 0.43647969, 0.39120616, 0.34752997, 0.30580127,
-        0.26632152, 0.22934058, 0.19505503, 0.16360756, 0.13508755, 0.10953262, 0.0869312,
-        0.067226, 0.0503182, 0.03607231, 0.02432151, 0.01487334, 0.00752, 0.0,
+        0.99733006, 1.0, 0.99733006, 0.98935595, 0.97618418, 0.95799003,
+        0.93501423, 0.90755855, 0.87598009, 0.84068475, 0.80211977,
+        0.76076565, 0.71712752, 0.67172623, 0.62508937, 0.57774224,
+        0.53019925, 0.48295561, 0.43647969, 0.39120616, 0.34752997,
+        0.30580127, 0.26632152, 0.22934058, 0.19505503, 0.16360756,
+        0.13508755, 0.10953262, 0.0869312, 0.067226, 0.0503182, 0.03607231,
+        0.02432151, 0.01487334, 0.00752, 0.0,
     ]
 };
 
@@ -1040,7 +1157,10 @@ fn sinc(cutoff: f32, x: f32, n: i32, window_func: &FuncDef) -> f32 {
         0.0
     } else {
         let first_factor = cutoff_64 * (PI_64 * xx).sin() / (PI_64 * xx);
-        let second_factor = compute_func((2.0 * f64::from(x) / n_64).abs() as f32, window_func);
+        let second_factor = compute_func(
+            (2.0 * f64::from(x) / n_64).abs() as f32,
+            window_func,
+        );
         (first_factor * second_factor) as f32
     }
 }
@@ -1052,7 +1172,8 @@ fn compute_func(x: f32, func: &FuncDef) -> f64 {
     let frac = f64::from(y - ind as f32);
     interp[3] = -0.1666666667 * frac + 0.1666666667 * frac.powi(3);
     interp[2] = frac + 0.5 * frac.powi(2) - 0.5 * frac.powi(3);
-    interp[0] = -0.3333333333 * frac + 0.5 * frac.powi(2) - 0.1666666667 * frac.powi(3);
+    interp[0] = -0.3333333333 * frac + 0.5 * frac.powi(2)
+        - 0.1666666667 * frac.powi(3);
     interp[1] = 1.0 - interp[3] - interp[2] - interp[0];
 
     interp
@@ -1079,7 +1200,8 @@ fn resampler_basic_direct_single(
     let frac_advance = st.frac_advance;
     let den_rate: u32 = st.den_rate;
     while !(last_sample >= *in_len || out_sample >= *out_len) {
-        let sinct: &[f32] = &st.sinc_table[(samp_frac_num * n as u32) as usize..];
+        let sinct: &[f32] =
+            &st.sinc_table[(samp_frac_num * n as u32) as usize..];
         let iptr: &[f32] = &in_0[last_sample as usize..];
         let mut sum: f32 = 0.0;
         let mut j: i32 = 0;
@@ -1118,18 +1240,23 @@ fn resampler_basic_direct_double(
     let frac_advance = st.frac_advance;
     let den_rate: u32 = st.den_rate;
     while !(last_sample >= *in_len || out_sample >= *out_len) {
-        let sinct: &[f32] = &st.sinc_table[(samp_frac_num * n as u32) as usize..];
+        let sinct: &[f32] =
+            &st.sinc_table[(samp_frac_num * n as u32) as usize..];
         let iptr: &[f32] = &in_0[last_sample as usize..];
         let mut accum: [f64; 4] = [0.0; 4];
         let mut j: i32 = 0;
         while j < n {
             accum[0usize] += f64::from(sinct[j as usize] * iptr[j as usize]);
-            accum[1usize] += f64::from(sinct[(j + 1) as usize] * iptr[(j + 1) as usize]);
-            accum[2usize] += f64::from(sinct[(j + 2) as usize] * iptr[(j + 2) as usize]);
-            accum[3usize] += f64::from(sinct[(j + 3) as usize] * iptr[(j + 3) as usize]);
+            accum[1usize] +=
+                f64::from(sinct[(j + 1) as usize] * iptr[(j + 1) as usize]);
+            accum[2usize] +=
+                f64::from(sinct[(j + 2) as usize] * iptr[(j + 2) as usize]);
+            accum[3usize] +=
+                f64::from(sinct[(j + 3) as usize] * iptr[(j + 3) as usize]);
             j += 4
         }
-        let sum: f64 = accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
+        let sum: f64 =
+            accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
         out[(out_stride * out_sample) as usize] = sum as f32;
         out_sample += 1;
         last_sample += int_advance;
@@ -1194,7 +1321,8 @@ fn speex_resampler_process_native(
     let ilen: u32 = *in_len;
     let mut j: i32 = 0;
     while j < n - 1 {
-        st.mem[mem_idx + j as usize] = st.mem[mem_idx + (j as u32 + ilen) as usize];
+        st.mem[mem_idx + j as usize] =
+            st.mem[mem_idx + (j as u32 + ilen) as usize];
         j += 1
     }
     RESAMPLER_ERR_SUCCESS
@@ -1209,7 +1337,13 @@ fn speex_resampler_magic<'a, 'b>(
     let channel_idx = channel_index as usize;
     let mut tmp_in_len = st.magic_samples[channel_idx];
     let mem_idx = (st.filt_len + channel_index * st.mem_alloc_size) as usize;
-    speex_resampler_process_native(st, channel_index, &mut tmp_in_len, *out, &mut out_len);
+    speex_resampler_process_native(
+        st,
+        channel_index,
+        &mut tmp_in_len,
+        *out,
+        &mut out_len,
+    );
     st.magic_samples[channel_idx] -= tmp_in_len;
     if st.magic_samples[channel_idx] != 0 {
         let mem = &st.mem[mem_idx - 1 + tmp_in_len as usize..].to_vec();
