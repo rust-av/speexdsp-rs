@@ -8,8 +8,17 @@
     unused_mut
 )]
 
-use std::os::raw::{c_double, c_float, c_int};
+use std::{
+    ffi::c_void,
+    os::raw::{c_double, c_float, c_int, c_ulong},
+};
 
+extern "C" {
+    #[no_mangle]
+    fn calloc(_: c_ulong, _: c_ulong) -> *mut c_void;
+    #[no_mangle]
+    fn free(__ptr: *mut c_void);
+}
 /* *******************************************************************
 *                                                                  *
 * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
@@ -31,29 +40,21 @@ last mod: $Id: smallft.h,v 1.3 2003/09/16 18:35:45 jm Exp $
    @brief Discrete Rotational Fourier Transform (DRFT)
 */
 /* * Discrete Rotational Fourier Transform lookup */
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct drft_lookup {
     pub n: c_int,
-    pub trigcache: Vec<f32>,
-    pub splitcache: Vec<i32>,
+    pub trigcache: *mut c_float,
+    pub splitcache: *mut c_int,
 }
-
-impl drft_lookup {
-    pub fn new(n: usize) -> Self {
-        let mut l = Self {
-            n: n as c_int,
-            trigcache: vec![0.0; 3 * (n as usize)],
-            splitcache: vec![0; 32],
-        };
-        unsafe {
-            fdrffti(n, &mut l.trigcache, &mut l.splitcache);
-        }
-
-        l
-    }
+#[inline]
+pub unsafe fn speex_alloc(mut size: c_int) -> *mut c_void {
+    return calloc(size as c_ulong, 1 as c_int as c_ulong);
 }
-
+#[inline]
+pub unsafe fn speex_free(mut ptr: *mut c_void) {
+    free(ptr);
+}
 /* *******************************************************************
 *                                                                  *
 * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
@@ -82,15 +83,14 @@ last mod: $Id: smallft.c,v 1.19 2003/10/08 05:12:37 jm Exp $
  * it follows R_0, R_1, I_1, R_2, I_2 ... R_n-1, I_n-1, I_n like the
  * FORTRAN version
  */
-unsafe extern "C" fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
+pub unsafe fn drfti1(
+    mut n: c_int,
+    mut wa: *mut c_float,
+    mut ifac: *mut c_int,
+) {
     static mut ntryh: [c_int; 4] =
         [4 as c_int, 2 as c_int, 3 as c_int, 5 as c_int];
     static mut tpi: c_float = 6.28318530717958648f32;
-
-    let mut n = wa.len() as i32;
-    let mut wa = wa.as_mut_ptr();
-    let mut ifac = ifac.as_mut_ptr();
-
     let mut arg: c_float = 0.;
     let mut argh: c_float = 0.;
     let mut argld: c_float = 0.;
@@ -189,17 +189,17 @@ unsafe extern "C" fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
         k1 += 1
     }
 }
-unsafe extern "C" fn fdrffti(
-    n: usize,
-    wsave: &mut [f32],
-    mut ifac: &mut [i32],
+pub unsafe fn fdrffti(
+    mut n: c_int,
+    mut wsave: *mut c_float,
+    mut ifac: *mut c_int,
 ) {
-    if n == 1 {
+    if n == 1 as c_int {
         return;
     }
-    drfti1(&mut wsave[n..n * 2], ifac);
+    drfti1(n, wsave.offset(n as isize), ifac);
 }
-unsafe extern "C" fn dradf2(
+pub unsafe fn dradf2(
     mut ido: c_int,
     mut l1: c_int,
     mut cc: *mut c_float,
@@ -287,7 +287,7 @@ unsafe extern "C" fn dradf2(
         k += 1
     }
 }
-unsafe extern "C" fn dradf4(
+pub unsafe fn dradf4(
     mut ido: c_int,
     mut l1: c_int,
     mut cc: *mut c_float,
@@ -436,7 +436,7 @@ unsafe extern "C" fn dradf4(
         k += 1
     }
 }
-unsafe extern "C" fn dradfg(
+pub unsafe fn dradfg(
     mut ido: c_int,
     mut ip: c_int,
     mut l1: c_int,
@@ -899,7 +899,7 @@ unsafe extern "C" fn dradfg(
         return;
     };
 }
-unsafe extern "C" fn drftf1(
+pub unsafe fn drftf1(
     mut n: c_int,
     mut c: *mut c_float,
     mut ch: *mut c_float,
@@ -1020,7 +1020,7 @@ unsafe extern "C" fn drftf1(
         i += 1
     }
 }
-unsafe extern "C" fn dradb2(
+pub unsafe fn dradb2(
     mut ido: c_int,
     mut l1: c_int,
     mut cc: *mut c_float,
@@ -1108,7 +1108,7 @@ unsafe extern "C" fn dradb2(
         k += 1
     }
 }
-unsafe extern "C" fn dradb3(
+pub unsafe fn dradb3(
     mut ido: c_int,
     mut l1: c_int,
     mut cc: *mut c_float,
@@ -1216,7 +1216,7 @@ unsafe extern "C" fn dradb3(
         k += 1
     }
 }
-unsafe extern "C" fn dradb4(
+pub unsafe fn dradb4(
     mut ido: c_int,
     mut l1: c_int,
     mut cc: *mut c_float,
@@ -1372,7 +1372,7 @@ unsafe extern "C" fn dradb4(
         k += 1
     }
 }
-unsafe extern "C" fn dradbg(
+pub unsafe fn dradbg(
     mut ido: c_int,
     mut ip: c_int,
     mut l1: c_int,
@@ -1846,7 +1846,7 @@ unsafe extern "C" fn dradbg(
         return;
     };
 }
-unsafe extern "C" fn drftb1(
+pub unsafe fn drftb1(
     mut n: c_int,
     mut c: *mut c_float,
     mut ch: *mut c_float,
@@ -2010,8 +2010,8 @@ unsafe extern "C" fn drftb1(
         i += 1
     }
 }
-#[no_mangle]
-pub unsafe extern "C" fn spx_drft_forward(
+
+pub unsafe fn spx_drft_forward(
     mut l: *mut drft_lookup,
     mut data: *mut c_float,
 ) {
@@ -2021,13 +2021,13 @@ pub unsafe extern "C" fn spx_drft_forward(
     drftf1(
         (*l).n,
         data,
-        (*l).trigcache.as_mut_ptr(),
-        (*l).trigcache.as_mut_ptr().offset((*l).n as isize),
-        (*l).splitcache.as_mut_ptr(),
+        (*l).trigcache,
+        (*l).trigcache.offset((*l).n as isize),
+        (*l).splitcache,
     );
 }
-#[no_mangle]
-pub unsafe extern "C" fn spx_drft_backward(
+
+pub unsafe fn spx_drft_backward(
     mut l: *mut drft_lookup,
     mut data: *mut c_float,
 ) {
@@ -2037,108 +2037,34 @@ pub unsafe extern "C" fn spx_drft_backward(
     drftb1(
         (*l).n,
         data,
-        (*l).trigcache.as_mut_ptr(),
-        (*l).trigcache.as_mut_ptr().offset((*l).n as isize),
-        (*l).splitcache.as_mut_ptr(),
+        (*l).trigcache,
+        (*l).trigcache.offset((*l).n as isize),
+        (*l).splitcache,
     );
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::orig;
-    use std::{
-        convert::TryInto,
-        os::raw::{c_float, c_int},
+pub unsafe fn spx_drft_init(mut l: *mut drft_lookup, mut n: c_int) {
+    (*l).n = n;
+    (*l).trigcache = speex_alloc(
+        ((3 as c_int * n) as c_ulong)
+            .wrapping_mul(::std::mem::size_of::<c_float>() as c_ulong)
+            as c_int,
+    ) as *mut c_float;
+    (*l).splitcache = speex_alloc(
+        (32 as c_int as c_ulong)
+            .wrapping_mul(::std::mem::size_of::<c_int>() as c_ulong)
+            as c_int,
+    ) as *mut c_int;
+    fdrffti(n, (*l).trigcache, (*l).splitcache);
+}
+
+pub unsafe fn spx_drft_clear(mut l: *mut drft_lookup) {
+    if !l.is_null() {
+        if !(*l).trigcache.is_null() {
+            speex_free((*l).trigcache as *mut c_void);
+        }
+        if !(*l).splitcache.is_null() {
+            speex_free((*l).splitcache as *mut c_void);
+        }
     };
-
-    #[test]
-    fn fdrffti_simple() {
-        let mut trigcache = [42. as c_float; 3];
-        let mut splitcache = [24 as c_int; 32];
-
-        unsafe {
-            super::fdrffti(1, &mut trigcache, &mut splitcache);
-        }
-        assert!(trigcache.iter().all(|&x| x == 42.));
-        assert!(splitcache.iter().all(|&x| x == 24));
-    }
-
-    #[test]
-    fn fdrffti() {
-        const SIZE: usize = 1024;
-        const EPSILON: c_float = 1e-6;
-
-        let mut trigcache = [0. as c_float; SIZE * 3];
-        let mut splitcache = [0 as c_int; 32];
-
-        unsafe {
-            super::fdrffti(SIZE, &mut trigcache, &mut splitcache);
-        }
-
-        let mut expected_trigcache = [0. as c_float; SIZE * 3];
-        let mut expected_splitcache = [0 as c_int; 32];
-
-        unsafe {
-            orig::smallft::fdrffti(
-                SIZE.try_into().unwrap(),
-                expected_trigcache.as_mut_ptr(),
-                expected_splitcache.as_mut_ptr(),
-            );
-        }
-
-        assert!(trigcache
-            .iter()
-            .zip(expected_trigcache.iter())
-            .all(|(&a, &b)| (a - b).abs() < EPSILON));
-
-        assert!(splitcache
-            .iter()
-            .zip(expected_splitcache.iter())
-            .all(|(&a, &b)| a == b));
-    }
-
-    #[test]
-    fn drftf1() {
-        const EPSILON: f32 = 1e-8;
-        use std::f32::consts::PI;
-
-        let fun1 = |x| (x as c_float / 1000. * 5. * 2. * PI).sin() * 5.;
-        let fun2 = |x| (x as c_float / 1000. * 3. * 2. * PI).cos() * 2.;
-
-        let mut input: Vec<_> = (0..1000).map(|x| fun1(x) + fun2(x)).collect();
-        let mut splitcache = [1 as c_int; 32];
-        let mut trigcache = vec![0. as c_float; input.len() * 3];
-        splitcache[1] = 23;
-        splitcache[2] = 2;
-        splitcache[4] = 2;
-
-        let mut output = input.clone();
-        let mut trigcache_clone = trigcache.clone();
-        let mut splitcache_clone = splitcache.clone();
-
-        unsafe {
-            super::drftf1(
-                input.len() as c_int,
-                output.as_mut_ptr(),
-                trigcache.as_mut_ptr(),
-                trigcache.as_mut_ptr().offset(input.len() as isize),
-                splitcache.as_mut_ptr(),
-            );
-        }
-        let mut expected_output = input.clone();
-        unsafe {
-            orig::smallft::drftf1(
-                input.len() as c_int,
-                expected_output.as_mut_ptr(),
-                trigcache_clone.as_mut_ptr(),
-                trigcache_clone.as_mut_ptr().offset(input.len() as isize),
-                splitcache_clone.as_mut_ptr(),
-            );
-        }
-
-        assert!(output
-            .iter()
-            .zip(expected_output.iter())
-            .all(|(a, b)| (a - b).abs() < EPSILON));
-    }
 }
