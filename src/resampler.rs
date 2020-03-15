@@ -1,10 +1,12 @@
+#![allow(non_camel_case_types)]
+#![allow(unreachable_patterns)]
+
 #[derive(Clone, Copy, Debug)]
 pub enum Error {
     AllocFailed = 1,
     BadState = 2,
     InvalidArg = 3,
     PtrOverlap = 4,
-    Overflow = 5,
 }
 
 use std::fmt;
@@ -16,7 +18,6 @@ impl fmt::Display for Error {
             Error::BadState => "Bad resampler state.",
             Error::InvalidArg => "Invalid argument.",
             Error::PtrOverlap => "Input and output buffers overlap.",
-            Error::Overflow => "Muldiv overflow.",
         };
 
         write!(f, "{}", v)
@@ -63,7 +64,6 @@ mod sys {
                 RESAMPLER_ERR_BAD_STATE => Error::BadState,
                 RESAMPLER_ERR_INVALID_ARG => Error::InvalidArg,
                 RESAMPLER_ERR_PTR_OVERLAP => Error::PtrOverlap,
-                RESAMPLER_ERR_OVERFLOW => Error::Overflow,
                 _ => unreachable!(),
             }
         }
@@ -204,74 +204,5 @@ mod sys {
     }
 }
 
-pub mod native {
-    use super::{Error, Resampler};
-    pub use speexdsp_resampler::State;
-
-    impl From<speexdsp_resampler::Error> for Error {
-        fn from(v: speexdsp_resampler::Error) -> Error {
-            match v {
-                speexdsp_resampler::Error::AllocFailed => Error::AllocFailed,
-                speexdsp_resampler::Error::InvalidArg => Error::InvalidArg,
-            }
-        }
-    }
-
-    impl Resampler for State {
-        fn new(
-            channels: usize,
-            in_rate: usize,
-            out_rate: usize,
-            quality: usize,
-        ) -> Result<Self, Error> {
-            State::new(channels, in_rate, out_rate, quality)
-                .map_err(|e| e.into())
-        }
-        fn set_rate(
-            &mut self,
-            in_rate: usize,
-            out_rate: usize,
-        ) -> Result<(), Error> {
-            State::set_rate(self, in_rate, out_rate).map_err(|e| e.into())
-        }
-        fn get_rate(&self) -> (usize, usize) {
-            State::get_rate(self)
-        }
-        fn get_ratio(&self) -> (usize, usize) {
-            State::get_ratio(self)
-        }
-        fn process_float(
-            &mut self,
-            index: usize,
-            input: &[f32],
-            output: &mut [f32],
-        ) -> Result<(usize, usize), Error> {
-            State::process_float(self, index, input, output)
-                .map_err(|e| e.into())
-        }
-        fn skip_zeros(&mut self) {
-            State::skip_zeros(self);
-        }
-        fn reset(&mut self) {
-            State::reset(self);
-        }
-        fn get_input_latency(&self) -> usize {
-            State::get_input_latency(self)
-        }
-        fn get_output_latency(&self) -> usize {
-            State::get_output_latency(self)
-        }
-        fn set_quality(&mut self, quality: usize) -> Result<(), Error> {
-            State::set_quality(self, quality).map_err(|e| e.into())
-        }
-        fn get_quality(&self) -> usize {
-            State::get_quality(self)
-        }
-    }
-}
-
 #[cfg(feature = "sys")]
 pub use self::sys::*;
-
-#[cfg(not(feature = "sys"))]
-pub use self::native::*;
