@@ -1,3 +1,6 @@
+#![allow(non_camel_case_types)]
+#![allow(unreachable_patterns)]
+
 #[derive(Clone, Copy, Debug)]
 pub enum Error {
     AllocFailed = 1,
