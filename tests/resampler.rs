@@ -38,12 +38,12 @@ mod comparison {
 
         let mut st_native = native::State::new(1, RATE, init_rate, 4).unwrap();
 
-        st.set_rate(RATE, start_rate);
+        st.set_rate(RATE, start_rate).unwrap();
         st.skip_zeros();
 
         st.set_quality(quality).unwrap();
 
-        st_native.set_rate(RATE, start_rate);
+        st_native.set_rate(RATE, start_rate).unwrap();
         st_native.skip_zeros();
 
         st_native.set_quality(quality).unwrap();
@@ -96,11 +96,11 @@ mod comparison {
                 });
 
             if num_gt_den {
-                st.set_rate(RATE, rate);
-                st_native.set_rate(RATE, rate);
+                st.set_rate(RATE, rate).unwrap();
+                st_native.set_rate(RATE, rate).unwrap();
             } else {
-                st.set_rate(rate, RATE);
-                st_native.set_rate(rate, RATE);
+                st.set_rate(rate, RATE).unwrap();
+                st_native.set_rate(rate, RATE).unwrap();
             }
         }
     }

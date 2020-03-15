@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types)]
+
 #[cfg(feature = "sys")]
 mod sys {
     use speexdsp_sys::jitter::*;
