@@ -7,7 +7,6 @@ pub enum Error {
     BadState = 2,
     InvalidArg = 3,
     PtrOverlap = 4,
-    Overflow = 5,
 }
 
 use std::fmt;
@@ -19,7 +18,6 @@ impl fmt::Display for Error {
             Error::BadState => "Bad resampler state.",
             Error::InvalidArg => "Invalid argument.",
             Error::PtrOverlap => "Input and output buffers overlap.",
-            Error::Overflow => "Muldiv overflow.",
         };
 
         write!(f, "{}", v)
@@ -66,7 +64,6 @@ mod sys {
                 RESAMPLER_ERR_BAD_STATE => Error::BadState,
                 RESAMPLER_ERR_INVALID_ARG => Error::InvalidArg,
                 RESAMPLER_ERR_PTR_OVERLAP => Error::PtrOverlap,
-                RESAMPLER_ERR_OVERFLOW => Error::Overflow,
                 _ => unreachable!(),
             }
         }
