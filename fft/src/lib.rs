@@ -1,7 +1,5 @@
 mod fftwrap;
 mod smallft;
 
-#[cfg(test)]
-mod orig;
-
 pub use crate::fftwrap::*;
+pub use crate::smallft::*;
