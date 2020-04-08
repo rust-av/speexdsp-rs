@@ -2045,11 +2045,8 @@ pub unsafe extern "C" fn spx_drft_backward(
 
 #[cfg(test)]
 mod tests {
-    use crate::orig;
-    use std::{
-        convert::TryInto,
-        os::raw::{c_float, c_int},
-    };
+    use super::*;
+    use std::os::raw::{c_float, c_int};
 
     #[test]
     fn fdrffti_simple() {
@@ -2057,88 +2054,9 @@ mod tests {
         let mut splitcache = [24 as c_int; 32];
 
         unsafe {
-            super::fdrffti(1, &mut trigcache, &mut splitcache);
+            fdrffti(1, &mut trigcache, &mut splitcache);
         }
         assert!(trigcache.iter().all(|&x| x == 42.));
         assert!(splitcache.iter().all(|&x| x == 24));
-    }
-
-    #[test]
-    fn fdrffti() {
-        const SIZE: usize = 1024;
-        const EPSILON: c_float = 1e-6;
-
-        let mut trigcache = [0. as c_float; SIZE * 3];
-        let mut splitcache = [0 as c_int; 32];
-
-        unsafe {
-            super::fdrffti(SIZE, &mut trigcache, &mut splitcache);
-        }
-
-        let mut expected_trigcache = [0. as c_float; SIZE * 3];
-        let mut expected_splitcache = [0 as c_int; 32];
-
-        unsafe {
-            orig::smallft::fdrffti(
-                SIZE.try_into().unwrap(),
-                expected_trigcache.as_mut_ptr(),
-                expected_splitcache.as_mut_ptr(),
-            );
-        }
-
-        assert!(trigcache
-            .iter()
-            .zip(expected_trigcache.iter())
-            .all(|(&a, &b)| (a - b).abs() < EPSILON));
-
-        assert!(splitcache
-            .iter()
-            .zip(expected_splitcache.iter())
-            .all(|(&a, &b)| a == b));
-    }
-
-    #[test]
-    fn drftf1() {
-        const EPSILON: f32 = 1e-8;
-        use std::f32::consts::PI;
-
-        let fun1 = |x| (x as c_float / 1000. * 5. * 2. * PI).sin() * 5.;
-        let fun2 = |x| (x as c_float / 1000. * 3. * 2. * PI).cos() * 2.;
-
-        let mut input: Vec<_> = (0..1000).map(|x| fun1(x) + fun2(x)).collect();
-        let mut splitcache = [1 as c_int; 32];
-        let mut trigcache = vec![0. as c_float; input.len() * 3];
-        splitcache[1] = 23;
-        splitcache[2] = 2;
-        splitcache[4] = 2;
-
-        let mut output = input.clone();
-        let mut trigcache_clone = trigcache.clone();
-        let mut splitcache_clone = splitcache.clone();
-
-        unsafe {
-            super::drftf1(
-                input.len() as c_int,
-                output.as_mut_ptr(),
-                trigcache.as_mut_ptr(),
-                trigcache.as_mut_ptr().offset(input.len() as isize),
-                splitcache.as_mut_ptr(),
-            );
-        }
-        let mut expected_output = input.clone();
-        unsafe {
-            orig::smallft::drftf1(
-                input.len() as c_int,
-                expected_output.as_mut_ptr(),
-                trigcache_clone.as_mut_ptr(),
-                trigcache_clone.as_mut_ptr().offset(input.len() as isize),
-                splitcache_clone.as_mut_ptr(),
-            );
-        }
-
-        assert!(output
-            .iter()
-            .zip(expected_output.iter())
-            .all(|(a, b)| (a - b).abs() < EPSILON));
     }
 }
