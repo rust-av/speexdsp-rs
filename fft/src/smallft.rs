@@ -1225,7 +1225,7 @@ unsafe extern "C" fn dradb4(
     mut wa2: *mut c_float,
     mut wa3: *mut c_float,
 ) {
-    static mut sqrt2: c_float = 1.414213562373095f32;
+    static mut sqrt2: c_float = std::f32::consts::SQRT_2;
     let mut i: c_int = 0;
     let mut k: c_int = 0;
     let mut t0: c_int = 0;
@@ -2048,6 +2048,8 @@ mod tests {
     use super::*;
     use std::os::raw::{c_float, c_int};
 
+    const EPSILON: c_float = 1e-6;
+
     #[test]
     fn fdrffti_simple() {
         let mut trigcache = [42. as c_float; 3];
@@ -2056,7 +2058,7 @@ mod tests {
         unsafe {
             fdrffti(1, &mut trigcache, &mut splitcache);
         }
-        assert!(trigcache.iter().all(|&x| x == 42.));
+        assert!(trigcache.iter().all(|&x| (x - 42.).abs() < EPSILON));
         assert!(splitcache.iter().all(|&x| x == 24));
     }
 }

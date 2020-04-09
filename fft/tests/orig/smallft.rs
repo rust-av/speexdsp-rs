@@ -1225,7 +1225,7 @@ pub unsafe fn dradb4(
     mut wa2: *mut c_float,
     mut wa3: *mut c_float,
 ) {
-    static mut sqrt2: c_float = 1.414213562373095f32;
+    static mut sqrt2: c_float = std::f32::consts::SQRT_2;
     let mut i: c_int = 0;
     let mut k: c_int = 0;
     let mut t0: c_int = 0;
