@@ -1,18 +1,3 @@
-#![allow(
-    dead_code,
-    mutable_transmutes,
-    non_camel_case_types,
-    non_snake_case,
-    non_upper_case_globals,
-    unused_assignments,
-    unused_mut
-)]
-
-use std::{
-    ffi::c_void,
-    os::raw::{c_double, c_float, c_int},
-};
-
 use crate::smallft::*;
 
 /* Copyright (C) 2005-2006 Jean-Marc Valin
@@ -48,79 +33,46 @@ use crate::smallft::*;
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
-#[no_mangle]
-pub unsafe extern "C" fn spx_fft_init(mut size: c_int) -> *mut c_void {
-    let mut table = Box::new(drft_lookup::new(size as usize));
-
-    return Box::into_raw(table) as *mut c_void;
+pub fn spx_fft_init(size: usize) -> DrftLookup {
+    DrftLookup::new(size)
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn spx_fft_destroy(mut table: *mut c_void) {
-    let table = table as *mut drft_lookup;
-
-    Box::from_raw(table);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn spx_fft(
-    mut table: *mut c_void,
-    mut in_0: *mut c_float,
-    mut out: *mut c_float,
-) {
+pub fn spx_fft(table: &mut DrftLookup, in_0: &mut [f32], out: &mut [f32]) {
+    let scale = (1.0f64 / table.n as f64) as f32;
     if in_0 == out {
-        let mut i: c_int = 0;
-        let mut scale: c_float =
-            (1.0f64 / (*(table as *mut drft_lookup)).n as c_double) as c_float;
         eprintln!("FFT should not be done in-place");
-        i = 0 as c_int;
-        while i < (*(table as *mut drft_lookup)).n {
-            *out.offset(i as isize) = scale * *in_0.offset(i as isize);
-            i += 1
-        }
-    } else {
-        let mut i_0: c_int = 0;
-        let mut scale_0: c_float =
-            (1.0f64 / (*(table as *mut drft_lookup)).n as c_double) as c_float;
-        i_0 = 0 as c_int;
-        while i_0 < (*(table as *mut drft_lookup)).n {
-            *out.offset(i_0 as isize) = scale_0 * *in_0.offset(i_0 as isize);
-            i_0 += 1
-        }
     }
-    spx_drft_forward(table as *mut drft_lookup, out);
+
+    out.iter_mut()
+        .zip(in_0.iter())
+        .take(table.n as usize)
+        .for_each(|(o, i)| *o = scale * *i);
+
+    spx_drft_forward(table, out);
 }
-#[no_mangle]
-pub unsafe extern "C" fn spx_ifft(
-    mut table: *mut c_void,
-    mut in_0: *mut c_float,
-    mut out: *mut c_float,
-) {
+
+pub fn spx_ifft(table: &mut DrftLookup, in_0: &mut [f32], out: &mut [f32]) {
     if in_0 == out {
         eprintln!("FFT should not be done in-place");
     } else {
-        let mut i: c_int = 0;
-        i = 0 as c_int;
-        while i < (*(table as *mut drft_lookup)).n {
-            *out.offset(i as isize) = *in_0.offset(i as isize);
-            i += 1
-        }
+        out.copy_from_slice(&in_0[..table.n as usize]);
     }
-    spx_drft_backward(table as *mut drft_lookup, out);
+
+    spx_drft_backward(table, out);
 }
-#[no_mangle]
-pub unsafe extern "C" fn spx_fft_float(
-    mut table: *mut c_void,
-    mut in_0: *mut c_float,
-    mut out: *mut c_float,
+
+pub fn spx_fft_float(
+    table: &mut DrftLookup,
+    in_0: &mut [f32],
+    out: &mut [f32],
 ) {
     spx_fft(table, in_0, out);
 }
-#[no_mangle]
-pub unsafe extern "C" fn spx_ifft_float(
-    mut table: *mut c_void,
-    mut in_0: *mut c_float,
-    mut out: *mut c_float,
+
+pub fn spx_ifft_float(
+    table: &mut DrftLookup,
+    in_0: &mut [f32],
+    out: &mut [f32],
 ) {
     spx_ifft(table, in_0, out);
 }
