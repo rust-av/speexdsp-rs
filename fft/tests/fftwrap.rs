@@ -5,7 +5,7 @@ mod orig;
 use crate::orig::fftwrap as original;
 use speexdsp_fft::*;
 
-const INPUT: [std::os::raw::c_float; 64] = [
+const INPUT: [f32; 64] = [
     1.0,
     1.999002,
     2.832922,
@@ -74,62 +74,40 @@ const INPUT: [std::os::raw::c_float; 64] = [
 
 const EPSILON: f32 = 1e-8;
 
+macro_rules! test_fftwrap {
+    ($func: ident) => {
+        let mut output = [0.; 64];
+        let mut table = spx_fft_init(INPUT.len());
+        let mut input = INPUT.clone();
+
+        $func(&mut table, &mut input, &mut output);
+
+        let mut expected_output = [0.; 64];
+        unsafe {
+            let table = original::spx_fft_init(INPUT.len() as i32);
+            let mut input = INPUT.clone();
+
+            original::$func(
+                table,
+                input.as_mut_ptr(),
+                expected_output.as_mut_ptr(),
+            );
+            original::spx_fft_destroy(table);
+        };
+
+        assert!(output
+            .iter()
+            .zip(expected_output.iter())
+            .all(|(a, b)| (a - b).abs() < EPSILON));
+    };
+}
+
 #[test]
 fn fft() {
-    let mut output = [0.; 64];
-    unsafe {
-        let table = spx_fft_init(INPUT.len() as i32);
-        let mut input = INPUT.clone();
-
-        spx_fft(table, input.as_mut_ptr(), output.as_mut_ptr());
-        spx_fft_destroy(table);
-    };
-
-    let mut expected_output = [0.; 64];
-    unsafe {
-        let table = original::spx_fft_init(INPUT.len() as i32);
-        let mut input = INPUT.clone();
-
-        original::spx_fft(
-            table,
-            input.as_mut_ptr(),
-            expected_output.as_mut_ptr(),
-        );
-        original::spx_fft_destroy(table);
-    };
-
-    assert!(output
-        .iter()
-        .zip(expected_output.iter())
-        .all(|(a, b)| (a - b).abs() < EPSILON));
+    test_fftwrap!(spx_fft);
 }
 
 #[test]
 fn ifft() {
-    let mut output = [0.; 64];
-    unsafe {
-        let table = spx_fft_init(INPUT.len() as i32);
-        let mut input = INPUT.clone();
-
-        spx_ifft(table, input.as_mut_ptr(), output.as_mut_ptr());
-        spx_fft_destroy(table);
-    };
-
-    let mut expected_output = [0.; 64];
-    unsafe {
-        let table = original::spx_fft_init(INPUT.len() as i32);
-        let mut input = INPUT.clone();
-
-        original::spx_ifft(
-            table,
-            input.as_mut_ptr(),
-            expected_output.as_mut_ptr(),
-        );
-        original::spx_fft_destroy(table);
-    };
-
-    assert!(output
-        .iter()
-        .zip(expected_output.iter())
-        .all(|(a, b)| (a - b).abs() < EPSILON));
+    test_fftwrap!(spx_ifft);
 }

@@ -14,11 +14,10 @@ const SPLITCACHE_SIZE: usize = 32;
 
 macro_rules! drft {
     ($func: ident) => {
-        let mut drft_lookup = drft_lookup::new(N);
+        let mut drft_lookup = DrftLookup::new(N);
         let mut data = vec![0.; 32];
-        unsafe {
-            $func(&mut drft_lookup, data.as_mut_ptr());
-        }
+
+        $func(&mut drft_lookup, &mut data);
 
         let mut original_drft_lookup = original::drft_lookup {
             n: 0,
@@ -62,7 +61,7 @@ macro_rules! drft {
 
 #[test]
 fn fdrffti() {
-    let drft_lookup = drft_lookup::new(N);
+    let drft_lookup = DrftLookup::new(N);
 
     let mut original_drft_lookup = original::drft_lookup {
         n: 0,
