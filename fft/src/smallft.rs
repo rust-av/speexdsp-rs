@@ -8,7 +8,10 @@
     unused_mut
 )]
 
-use std::os::raw::{c_double, c_float, c_int};
+use std::{
+    convert::TryInto,
+    os::raw::{c_double, c_float, c_int},
+};
 
 /* *******************************************************************
 *                                                                  *
@@ -82,112 +85,78 @@ last mod: $Id: smallft.c,v 1.19 2003/10/08 05:12:37 jm Exp $
  * it follows R_0, R_1, I_1, R_2, I_2 ... R_n-1, I_n-1, I_n like the
  * FORTRAN version
  */
-unsafe extern "C" fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
-    static mut ntryh: [c_int; 4] =
-        [4 as c_int, 2 as c_int, 3 as c_int, 5 as c_int];
-    static mut tpi: c_float = 6.28318530717958648f32;
+extern "C" fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
+    const NTRYH: [i32; 4] = [4, 2, 3, 5];
+    const TPI: f32 = 6.283_185_5;
 
-    let mut n = wa.len() as i32;
-    let mut wa = wa.as_mut_ptr();
-    let mut ifac = ifac.as_mut_ptr();
+    let n = wa.len().try_into().unwrap();
+    let ifac: &mut [i32; 32] = ifac.try_into().unwrap();
 
-    let mut arg: c_float = 0.;
-    let mut argh: c_float = 0.;
-    let mut argld: c_float = 0.;
-    let mut fi: c_float = 0.;
-    let mut ntry: c_int = 0 as c_int;
-    let mut i: c_int = 0;
-    let mut j: c_int = -(1 as c_int);
-    let mut k1: c_int = 0;
-    let mut l1: c_int = 0;
-    let mut l2: c_int = 0;
-    let mut ib: c_int = 0;
-    let mut ld: c_int = 0;
-    let mut ii: c_int = 0;
-    let mut ip: c_int = 0;
-    let mut is: c_int = 0;
-    let mut nq: c_int = 0;
-    let mut nr: c_int = 0;
-    let mut ido: c_int = 0;
-    let mut ipm: c_int = 0;
-    let mut nfm1: c_int = 0;
-    let mut nl: c_int = n;
-    let mut nf: c_int = 0 as c_int;
-    'c_10244: loop {
-        j += 1;
-        if j < 4 as c_int {
-            ntry = ntryh[j as usize]
-        } else {
-            ntry += 2 as c_int
-        }
+    let mut nf = 0;
+    let mut nl = n;
+
+    'out: for ntry in NTRYH
+        .iter()
+        .copied()
+        .chain(((NTRYH.last().unwrap() + 2)..).step_by(2))
+    {
         loop {
-            nq = nl / ntry;
-            nr = nl - ntry * nq;
-            if nr != 0 as c_int {
+            let nq = nl / ntry;
+            let nr = nl - ntry * nq;
+            if nr != 0 {
                 break;
             }
+
             nf += 1;
-            *ifac.offset((nf + 1 as c_int) as isize) = ntry;
-            nl = nq;
-            if !(ntry != 2 as c_int) {
-                if !(nf == 1 as c_int) {
-                    i = 1 as c_int;
-                    while i < nf {
-                        ib = nf - i + 1 as c_int;
-                        *ifac.offset((ib + 1 as c_int) as isize) =
-                            *ifac.offset(ib as isize);
-                        i += 1
-                    }
-                    *ifac.offset(2 as c_int as isize) = 2 as c_int
-                }
+            ifac[nf + 1] = ntry;
+            if ntry == 2 && nf != 1 {
+                ifac[1..nf]
+                    .rchunks_exact_mut(2)
+                    .for_each(|chunk| chunk[1] = chunk[0]);
+                ifac[2] = 2;
             }
-            if !(nl != 1 as c_int) {
-                break 'c_10244;
+
+            nl = nq;
+            if nl == 1 {
+                break 'out;
             }
         }
     }
-    *ifac.offset(0 as c_int as isize) = n;
-    *ifac.offset(1 as c_int as isize) = nf;
-    argh = tpi / n as c_float;
-    is = 0 as c_int;
-    nfm1 = nf - 1 as c_int;
-    l1 = 1 as c_int;
-    if nfm1 == 0 as c_int {
+    let nf = nf;
+
+    ifac[0] = n;
+    ifac[1] = nf.try_into().unwrap();
+    if nf == 0 {
         return;
     }
-    k1 = 0 as c_int;
-    while k1 < nfm1 {
-        ip = *ifac.offset((k1 + 2 as c_int) as isize);
-        ld = 0 as c_int;
-        l2 = l1 * ip;
-        ido = n / l2;
-        ipm = ip - 1 as c_int;
-        j = 0 as c_int;
-        while j < ipm {
-            ld += l1;
-            i = is;
-            argld = ld as c_float * argh;
-            fi = 0.0f32;
-            ii = 2 as c_int;
-            while ii < ido {
-                fi += 1.0f32;
-                arg = fi * argld;
-                let fresh0 = i;
-                i = i + 1;
-                *wa.offset(fresh0 as isize) =
-                    f64::cos(arg as c_double) as c_float;
-                let fresh1 = i;
-                i = i + 1;
-                *wa.offset(fresh1 as isize) =
-                    f64::sin(arg as c_double) as c_float;
-                ii += 2 as c_int
-            }
-            is += ido;
-            j += 1
-        }
-        l1 = l2;
-        k1 += 1
-    }
+
+    let argh = TPI / wa.len() as f32;
+    ifac[2..=nf].iter().map(|&ip| ip.try_into().unwrap()).fold(
+        (0, 1),
+        |(is, l1), ip: usize| {
+            let l2 = l1 * ip;
+            let ido = wa.len() / l2;
+            let ipm = ip - 1;
+
+            wa[is..]
+                .chunks_exact_mut(ido)
+                .zip((l1..).step_by(l1).map(|ld| ld as f32 * argh))
+                .take(ipm)
+                .for_each(|(chunk, argld)| {
+                    chunk[..ido.saturating_sub(2)].chunks_exact_mut(2).fold(
+                        1f32,
+                        |fi, chunk| {
+                            let arg = (fi * argld) as f64;
+                            chunk[0] = f64::cos(arg) as f32;
+                            chunk[1] = f64::sin(arg) as f32;
+                            fi + 1.
+                        },
+                    );
+                });
+
+            (is + ipm * ido, l2)
+        },
+    );
 }
 unsafe extern "C" fn fdrffti(
     n: usize,
