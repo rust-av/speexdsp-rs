@@ -2,8 +2,12 @@ extern crate speexdsp_fft;
 
 mod orig;
 
-use crate::orig::fftwrap as original;
+use std::ptr::null_mut;
+
 use speexdsp_fft::*;
+
+use crate::orig::fftwrap as original_fftwrap;
+use crate::orig::smallft as original_smallft;
 
 const INPUT: [f32; 64] = [
     1.0,
@@ -73,32 +77,85 @@ const INPUT: [f32; 64] = [
 ];
 
 const EPSILON: f32 = 1e-8;
+const N: usize = 2;
+const SPLITCACHE_SIZE: usize = 32;
 
 macro_rules! test_fftwrap {
     ($func: ident) => {
         let mut output = [0.; 64];
-        let mut table = spx_fft_init(INPUT.len());
+        let mut drft_lookup = DrftLookup::new(INPUT.len());
         let mut input = INPUT.clone();
 
-        $func(&mut table, &mut input, &mut output);
+        drft_lookup.$func(&mut input, &mut output);
 
         let mut expected_output = [0.; 64];
         unsafe {
-            let table = original::spx_fft_init(INPUT.len() as i32);
+            let drft_lookup =
+                original_fftwrap::spx_fft_init(INPUT.len() as i32);
             let mut input = INPUT.clone();
 
-            original::$func(
-                table,
+            original_fftwrap::$func(
+                drft_lookup,
                 input.as_mut_ptr(),
                 expected_output.as_mut_ptr(),
             );
-            original::spx_fft_destroy(table);
+            original_fftwrap::spx_fft_destroy(drft_lookup);
         };
 
         assert!(output
             .iter()
             .zip(expected_output.iter())
             .all(|(a, b)| (a - b).abs() < EPSILON));
+    };
+}
+
+macro_rules! drft {
+    ($func: ident) => {
+        let mut drft_lookup = DrftLookup::new(N);
+        let mut data = vec![0.; 32];
+
+        drft_lookup.$func(&mut data);
+
+        let mut original_drft_lookup = original_smallft::drft_lookup {
+            n: 0,
+            trigcache: null_mut(),
+            splitcache: null_mut(),
+        };
+        let mut data_original = vec![0.; 32];
+        unsafe {
+            original_smallft::spx_drft_init(
+                &mut original_drft_lookup,
+                N as i32,
+            );
+            original_smallft::$func(
+                &mut original_drft_lookup,
+                data_original.as_mut_ptr(),
+            );
+        }
+
+        let expected_trigcache = unsafe {
+            Vec::from_raw_parts(
+                original_drft_lookup.trigcache as *mut f32,
+                3 * N,
+                3 * N,
+            )
+        };
+
+        let expected_splitcache = unsafe {
+            Vec::from_raw_parts(
+                original_drft_lookup.splitcache as *mut i32,
+                SPLITCACHE_SIZE,
+                SPLITCACHE_SIZE,
+            )
+        };
+
+        assert!(drft_lookup
+            .trigcache
+            .iter()
+            .zip(expected_trigcache.iter())
+            .all(|(&a, &b)| (a - b).abs() < EPSILON));
+
+        assert_eq!(&drft_lookup.splitcache, &expected_splitcache);
     };
 }
 
@@ -110,4 +167,52 @@ fn fft() {
 #[test]
 fn ifft() {
     test_fftwrap!(spx_ifft);
+}
+
+#[test]
+fn fdrffti() {
+    let drft_lookup = DrftLookup::new(N);
+
+    let mut original_drft_lookup = original_smallft::drft_lookup {
+        n: 0,
+        trigcache: null_mut(),
+        splitcache: null_mut(),
+    };
+    unsafe {
+        original_smallft::spx_drft_init(&mut original_drft_lookup, N as i32);
+    }
+
+    let expected_trigcache = unsafe {
+        Vec::from_raw_parts(
+            original_drft_lookup.trigcache as *mut f32,
+            3 * N,
+            3 * N,
+        )
+    };
+
+    let expected_splitcache = unsafe {
+        Vec::from_raw_parts(
+            original_drft_lookup.splitcache as *mut i32,
+            SPLITCACHE_SIZE,
+            SPLITCACHE_SIZE,
+        )
+    };
+
+    assert!(drft_lookup
+        .trigcache
+        .iter()
+        .zip(expected_trigcache.iter())
+        .all(|(&a, &b)| (a - b).abs() < EPSILON));
+
+    assert_eq!(&drft_lookup.splitcache, &expected_splitcache);
+}
+
+#[test]
+fn drftf1() {
+    drft!(spx_drft_forward);
+}
+
+#[test]
+fn drftb1() {
+    drft!(spx_drft_backward);
 }
