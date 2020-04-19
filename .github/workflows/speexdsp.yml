@@ -47,7 +47,14 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --all --all-targets --all-features --tests -- --verbose
 
-  build:
+  tests:
+
+    strategy:
+      matrix:
+        conf:
+         - tests
+         - bench-resampler
+         - bench-resampler-sse
 
     env:
       SPEEX_DIR: speex-dir
@@ -62,7 +69,13 @@ jobs:
         git clone https://github.com/xiph/speexdsp.git
         cd speexdsp
         ./autogen.sh
-        ./configure --prefix=$HOME/$SPEEX_DIR
+        CONF=${{ matrix.conf }}
+        if [ ${CONF} = "bench-resampler" ]
+        then
+            ./configure --disable-sse --prefix=$HOME/$SPEEX_DIR
+        else
+            ./configure --prefix=$HOME/$SPEEX_DIR
+        fi
         make -j4 install
 
     - name: Set environment variables
@@ -70,10 +83,18 @@ jobs:
         echo "::set-env name=PKG_CONFIG_PATH::$HOME/$SPEEX_DIR/lib/pkgconfig"
         echo "::set-env name=LD_LIBRARY_PATH::$HOME/$SPEEX_DIR/lib"
 
+    - name: Run benchmark
+      if: matrix.conf != 'tests'
+      run: |
+        cargo bench -q --features sys -- resampler_c
+        cargo bench -q -- resampler_rust
+
     - name: Run no-default-features tests
+      if: matrix.conf == 'tests'
       run: |
         cargo test --all --no-default-features
 
     - name: Run all-features tests
+      if: matrix.conf == 'tests'
       run: |
         cargo test --all --all-features
