@@ -1,5 +1,3 @@
-use crate::smallft::*;
-
 /* Copyright (C) 2005-2006 Jean-Marc Valin
    File: fftwrap.c
 
@@ -33,46 +31,94 @@ use crate::smallft::*;
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
-pub fn spx_fft_init(size: usize) -> DrftLookup {
-    DrftLookup::new(size)
+
+use crate::smallft::*;
+
+#[derive(Clone)]
+pub struct DrftLookup {
+    pub n: usize,
+    pub trigcache: Vec<f32>,
+    pub splitcache: Vec<i32>,
 }
 
-pub fn spx_fft(table: &mut DrftLookup, in_0: &mut [f32], out: &mut [f32]) {
-    let scale = (1.0f64 / table.n as f64) as f32;
-    if in_0 == out {
-        eprintln!("FFT should not be done in-place");
+impl DrftLookup {
+    pub fn new(n: usize) -> Self {
+        let mut drft = Self {
+            n: n,
+            trigcache: vec![0.0; 3 * n],
+            splitcache: vec![0; 32],
+        };
+
+        fdrffti(n, &mut drft.trigcache, &mut drft.splitcache);
+
+        drft
     }
 
-    out.iter_mut()
-        .zip(in_0.iter())
-        .take(table.n as usize)
-        .for_each(|(o, i)| *o = scale * *i);
+    pub fn spx_fft(&mut self, in_0: &[f32], out: &mut [f32]) {
+        let scale = (1.0f64 / self.n as f64) as f32;
+        if in_0 == out {
+            eprintln!("FFT should not be done in-place");
+        }
 
-    spx_drft_forward(table, out);
-}
+        out.iter_mut()
+            .zip(in_0.iter())
+            .take(self.n as usize)
+            .for_each(|(o, i)| *o = scale * *i);
 
-pub fn spx_ifft(table: &mut DrftLookup, in_0: &mut [f32], out: &mut [f32]) {
-    if in_0 == out {
-        eprintln!("FFT should not be done in-place");
-    } else {
-        out.copy_from_slice(&in_0[..table.n as usize]);
+        self.spx_drft_forward(out);
     }
 
-    spx_drft_backward(table, out);
-}
+    pub fn spx_ifft(&mut self, in_0: &[f32], out: &mut [f32]) {
+        if in_0 == out {
+            eprintln!("FFT should not be done in-place");
+        } else {
+            out.copy_from_slice(&in_0[..self.n as usize]);
+        }
 
-pub fn spx_fft_float(
-    table: &mut DrftLookup,
-    in_0: &mut [f32],
-    out: &mut [f32],
-) {
-    spx_fft(table, in_0, out);
-}
+        self.spx_drft_backward(out);
+    }
 
-pub fn spx_ifft_float(
-    table: &mut DrftLookup,
-    in_0: &mut [f32],
-    out: &mut [f32],
-) {
-    spx_ifft(table, in_0, out);
+    pub fn spx_fft_float(&mut self, in_0: &[f32], out: &mut [f32]) {
+        self.spx_fft(in_0, out);
+    }
+
+    pub fn spx_ifft_float(&mut self, in_0: &[f32], out: &mut [f32]) {
+        self.spx_ifft(in_0, out);
+    }
+
+    pub fn spx_drft_forward(&mut self, data: &mut [f32]) {
+        if self.n == 1 {
+            return;
+        }
+
+        let mut trigcache_temp = self.trigcache[self.n as usize..].to_vec();
+
+        drftf1(
+            self.n as i32,
+            data,
+            &mut self.trigcache,
+            &mut trigcache_temp,
+            &mut self.splitcache,
+        );
+
+        self.trigcache[self.n as usize..].copy_from_slice(&trigcache_temp);
+    }
+
+    pub fn spx_drft_backward(&mut self, data: &mut [f32]) {
+        if self.n == 1 {
+            return;
+        }
+
+        let mut trigcache_temp = self.trigcache[self.n as usize..].to_vec();
+
+        drftb1(
+            self.n as i32,
+            data,
+            &mut self.trigcache,
+            &mut trigcache_temp,
+            &mut self.splitcache,
+        );
+
+        self.trigcache[self.n as usize..].copy_from_slice(&trigcache_temp);
+    }
 }

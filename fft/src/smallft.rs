@@ -1,27 +1,6 @@
 use crate::dradb::*;
 use crate::dradf::*;
 
-#[derive(Clone)]
-pub struct DrftLookup {
-    pub n: usize,
-    pub trigcache: Vec<f32>,
-    pub splitcache: Vec<i32>,
-}
-
-impl DrftLookup {
-    pub fn new(n: usize) -> Self {
-        let mut drft = Self {
-            n: n,
-            trigcache: vec![0.0; 3 * n],
-            splitcache: vec![0; 32],
-        };
-
-        fdrffti(n, &mut drft.trigcache, &mut drft.splitcache);
-
-        drft
-    }
-}
-
 #[inline(always)]
 fn drfti1_c_10244(ifac: &mut [i32], n: i32, nf: &mut i32) {
     const NTRYH: [i32; 4] = [4, 2, 3, 5];
@@ -62,7 +41,7 @@ fn drfti1_c_10244(ifac: &mut [i32], n: i32, nf: &mut i32) {
     }
 }
 
-fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
+pub(crate) fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
     const TPI: f32 = 6.283_185_307_179_586_48;
 
     let n = wa.len() as i32;
@@ -112,7 +91,7 @@ fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
     }
 }
 
-fn fdrffti(n: usize, wsave: &mut [f32], ifac: &mut [i32]) {
+pub(crate) fn fdrffti(n: usize, wsave: &mut [f32], ifac: &mut [i32]) {
     if n == 1 {
         return;
     }
@@ -152,7 +131,7 @@ fn drftf1_l102(
     }
 }
 
-fn drftf1(
+pub(crate) fn drftf1(
     n: i32,
     c: &mut [f32],
     ch: &mut [f32],
@@ -254,7 +233,7 @@ fn drftb1_l102(
     }
 }
 
-fn drftb1(
+pub(crate) fn drftb1(
     n: i32,
     c: &mut [f32],
     ch: &mut [f32],
@@ -310,42 +289,6 @@ fn drftb1(
     }
 
     c[..n as usize].copy_from_slice(&ch[..n as usize]);
-}
-
-pub fn spx_drft_forward(l: &mut DrftLookup, data: &mut [f32]) {
-    if l.n == 1 {
-        return;
-    }
-
-    let mut trigcache_temp = l.trigcache[l.n as usize..].to_vec();
-
-    drftf1(
-        l.n as i32,
-        data,
-        &mut l.trigcache,
-        &mut trigcache_temp,
-        &mut l.splitcache,
-    );
-
-    l.trigcache[l.n as usize..].copy_from_slice(&trigcache_temp);
-}
-
-pub fn spx_drft_backward(l: &mut DrftLookup, data: &mut [f32]) {
-    if l.n == 1 {
-        return;
-    }
-
-    let mut trigcache_temp = l.trigcache[l.n as usize..].to_vec();
-
-    drftb1(
-        l.n as i32,
-        data,
-        &mut l.trigcache,
-        &mut trigcache_temp,
-        &mut l.splitcache,
-    );
-
-    l.trigcache[l.n as usize..].copy_from_slice(&trigcache_temp);
 }
 
 #[cfg(test)]
