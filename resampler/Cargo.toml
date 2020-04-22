@@ -9,6 +9,3 @@ keywords = ["audio", "resampler"]
 license = "BSD-3-Clause"
 readme = "README.md"
 edition = "2018"
-
-
-
