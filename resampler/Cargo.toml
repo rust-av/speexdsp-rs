@@ -9,3 +9,6 @@ keywords = ["audio", "resampler"]
 license = "BSD-3-Clause"
 readme = "README.md"
 edition = "2018"
+
+[dependencies]
+cfg-if = "0.1.10"
