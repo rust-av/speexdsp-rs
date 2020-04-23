@@ -5,12 +5,9 @@
 /// [1]: https://github.com/xiph/speexdsp
 use std::mem;
 
-use std::f64::consts::PI as PI_64;
+use cfg_if::cfg_if;
 
-#[cfg(target_arch = "x86")]
-use std::arch::x86::*;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use std::f64::consts::PI as PI_64;
 
 pub const RESAMPLER_ERR_SUCCESS: usize = 0;
 pub const RESAMPLER_ERR_ALLOC_FAILED: usize = 1;
@@ -835,6 +832,343 @@ fn resampler_basic_zero(
     out_sample as i32
 }
 
+mod native {
+    #[inline(always)]
+    pub fn cubic_coef(frac: f32, interp: &mut [f32]) {
+        interp[0] = -0.16666999459266663 * frac
+            + 0.16666999459266663 * frac * frac * frac;
+        interp[1] = frac + 0.5 * frac * frac - 0.5f32 * frac * frac * frac;
+        interp[3] = -0.3333300054073334 * frac + 0.5 * frac * frac
+            - 0.16666999459266663 * frac * frac * frac;
+        interp[2] =
+            (1.0f64 - interp[0] as f64 - interp[1] as f64 - interp[3] as f64)
+                as f32;
+    }
+
+    #[inline(always)]
+    pub fn interpolate_step_single(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        oversample: usize,
+        offset: usize,
+        n: usize,
+        sinc_table: &[f32],
+        frac: f32,
+    ) {
+        let mut accum: [f32; 4] = [0.; 4];
+        in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
+            let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
+            accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
+                |(v, &s)| {
+                    *v += curr_in * s;
+                },
+            );
+        });
+        let mut interp: [f32; 4] = [0.; 4];
+        cubic_coef(frac, &mut interp);
+        out_slice[(out_stride * out_sample) as usize] = interp
+            .iter()
+            .zip(accum.iter())
+            .map(|(&x, &y)| x * y)
+            .fold(0., |acc, x| acc + x);
+    }
+
+    #[inline(always)]
+    pub fn interpolate_step_double(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        oversample: usize,
+        offset: usize,
+        n: usize,
+        sinc_table: &[f32],
+        frac: f32,
+    ) {
+        let mut accum: [f64; 4] = [0.0; 4];
+        in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
+            let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
+            accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
+                |(v, &s)| {
+                    *v += (curr_in * s) as f64;
+                },
+            );
+        });
+        let mut interp: [f32; 4] = [0.; 4];
+        cubic_coef(frac, &mut interp);
+        out_slice[(out_stride * out_sample) as usize] = interp
+            .iter()
+            .zip(accum.iter())
+            .map(|(&x, &y)| x * y as f32)
+            .fold(0., |acc, x| acc + x);
+    }
+
+    #[inline(always)]
+    pub fn direct_step_single(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        n: usize,
+        sinc_table: &[f32],
+    ) {
+        let mut sum: f32 = 0.0;
+        let mut j = 0;
+        while j < n {
+            sum += sinc_table[j as usize] * in_slice[j as usize];
+            j += 1
+        }
+        out_slice[(out_stride * out_sample) as usize] = sum;
+    }
+
+    #[inline(always)]
+    pub fn direct_step_double(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        n: usize,
+        sinc_table: &[f32],
+    ) {
+        let mut accum: [f64; 4] = [0.0; 4];
+        let mut j = 0;
+
+        while j < n {
+            accum[0usize] +=
+                f64::from(sinc_table[j as usize] * in_slice[j as usize]);
+            accum[1usize] += f64::from(
+                sinc_table[(j + 1) as usize] * in_slice[(j + 1) as usize],
+            );
+            accum[2usize] += f64::from(
+                sinc_table[(j + 2) as usize] * in_slice[(j + 2) as usize],
+            );
+            accum[3usize] += f64::from(
+                sinc_table[(j + 3) as usize] * in_slice[(j + 3) as usize],
+            );
+            j += 4
+        }
+        let sum: f64 =
+            accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
+        out_slice[(out_stride * out_sample) as usize] = sum as f32;
+    }
+}
+
+#[cfg(target_feature = "sse2")]
+mod sse2 {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::*;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::*;
+
+    #[inline]
+    pub unsafe fn convert_m128_to_m256d(v: __m128) -> __m256d {
+        let v64 = _mm256_castpd128_pd256(_mm_cvtps_pd(v));
+        let v64 = _mm256_insertf128_pd(
+            v64,
+            _mm_cvtps_pd(_mm_shuffle_ps(v, v, 0b00001110)),
+            1,
+        );
+        v64
+    }
+
+    #[inline]
+    pub unsafe fn hsum_m256d(v: __m256d) -> f64 {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        let low = _mm256_extractf128_pd(v, 0);
+        let high = _mm256_extractf128_pd(v, 1);
+        let low = _mm_add_pd(low, high);
+        let high64 = _mm_unpackhi_pd(low, low);
+        _mm_cvtsd_f64(_mm_add_sd(low, high64))
+    }
+
+    #[inline(always)]
+    pub unsafe fn cubic_coef(
+        frac: f32,
+        interp: &mut std::arch::x86_64::__m128,
+    ) {
+        let mut interp_v = [0.0, 0.0, 0.0, 0.0];
+
+        interp_v[0] = -0.16666999459266663 * frac
+            + 0.16666999459266663 * frac * frac * frac;
+        interp_v[1] = frac + 0.5 * frac * frac - 0.5f32 * frac * frac * frac;
+        interp_v[3] = -0.3333300054073334 * frac + 0.5 * frac * frac
+            - 0.16666999459266663 * frac * frac * frac;
+        interp_v[2] = (1.0f64
+            - interp_v[0] as f64
+            - interp_v[1] as f64
+            - interp_v[3] as f64) as f32;
+
+        *interp = _mm_loadu_ps(interp_v.as_ptr());
+    }
+
+    #[inline(always)]
+    pub fn interpolate_step_single(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        oversample: usize,
+        offset: usize,
+        n: usize,
+        sinc_table: &[f32],
+        frac: f32,
+    ) {
+        unsafe {
+            let mut accum = _mm_setzero_ps();
+            in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
+                let idx =
+                    (2 + (j + 1) * oversample as usize) - offset as usize;
+                let sinc_ptr: *const f32 = sinc_table[idx..].as_ptr();
+                accum = _mm_add_ps(
+                    accum,
+                    _mm_mul_ps(_mm_loadu_ps(sinc_ptr), _mm_set1_ps(curr_in)),
+                );
+            });
+            let mut interp = _mm_setzero_ps();
+            cubic_coef(frac, &mut interp);
+            let v = _mm_mul_ps(interp, accum);
+            out_slice[(out_stride * out_sample) as usize] =
+                _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
+        }
+    }
+
+    pub fn interpolate_step_double(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        oversample: usize,
+        offset: usize,
+        n: usize,
+        sinc_table: &[f32],
+        frac: f32,
+    ) {
+        unsafe {
+            let mut accum = _mm256_setzero_pd();
+            in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
+                let idx =
+                    (2 + (j + 1) * oversample as usize) - offset as usize;
+                let sinct_ptr: *const f32 = sinc_table[idx..].as_ptr();
+                let v =
+                    _mm_mul_ps(_mm_loadu_ps(sinct_ptr), _mm_set1_ps(curr_in));
+                let v64 = convert_m128_to_m256d(v);
+                accum = _mm256_add_pd(accum, v64);
+            });
+
+            let mut interp = _mm_setzero_ps();
+            cubic_coef(frac, &mut interp);
+
+            let accum32 = _mm256_cvtpd_ps(accum);
+
+            let v = _mm_mul_ps(interp, accum32);
+            out_slice[(out_stride * out_sample) as usize] =
+                _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
+        }
+    }
+
+    #[inline(always)]
+    pub fn direct_step_single(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        n: usize,
+        sinc_table: &[f32],
+    ) {
+        unsafe {
+            let mut accum = _mm_setzero_ps();
+            let mut j = 0;
+
+            while j < n {
+                let sinct_v = _mm_loadu_ps(sinc_table[j as usize..].as_ptr());
+                let iptr_v = _mm_loadu_ps(in_slice[j as usize..].as_ptr());
+                accum = _mm_add_ps(accum, _mm_mul_ps(sinct_v, iptr_v));
+                j += 4
+            }
+
+            out_slice[(out_stride * out_sample) as usize] =
+                _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(accum, accum), accum));
+        }
+    }
+
+    #[inline(always)]
+    pub fn direct_step_double(
+        in_slice: &[f32],
+        out_slice: &mut [f32],
+        out_stride: usize,
+        out_sample: usize,
+        n: usize,
+        sinc_table: &[f32],
+    ) {
+        unsafe {
+            let mut accum = _mm256_setzero_pd();
+            let mut j = 0;
+
+            while j < n {
+                let sinct_v = _mm_loadu_ps(sinc_table[j as usize..].as_ptr());
+                let iptr_v = _mm_loadu_ps(in_slice[j as usize..].as_ptr());
+                let v = _mm_mul_ps(sinct_v, iptr_v);
+
+                accum = _mm256_add_pd(accum, convert_m128_to_m256d(v));
+                j += 4;
+            }
+
+            out_slice[(out_stride * out_sample) as usize] =
+                hsum_m256d(accum) as f32;
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        #[test]
+        fn test_convert_m128_to_m256d() {
+            let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+            let mut output: Vec<f64> = vec![0.0; 4];
+
+            unsafe {
+                let v = _mm_loadu_ps(input.as_ptr());
+                _mm256_storeu_pd(
+                    output.as_mut_ptr(),
+                    super::convert_m128_to_m256d(v),
+                );
+            }
+
+            assert_eq!(output, vec![1.0, 2.0, 3.0, 4.0]);
+        }
+
+        #[test]
+        fn test_hsum_m256d() {
+            let input: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
+
+            let result = unsafe {
+                let v = _mm256_loadu_pd(input.as_ptr());
+                super::hsum_m256d(v)
+            };
+
+            assert_eq!(result as usize, 10 as usize);
+        }
+    }
+}
+
+cfg_if! {
+    if #[cfg(target_feature = "sse2")] {
+        use sse2::*;
+    } else {
+        use native::*;
+    }
+}
+
 fn resampler_basic_interpolate_single(
     st: &mut SpeexResamplerState,
     channel_index: u32,
@@ -861,55 +1195,17 @@ fn resampler_basic_interpolate_single(
         let frac =
             ((samp_frac_num * oversample) % den_rate) as f32 / den_rate as f32;
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        ))]
-        unsafe {
-            #[cfg(target_arch = "x86")]
-            use std::arch::x86::*;
-            #[cfg(target_arch = "x86_64")]
-            use std::arch::x86_64::*;
-
-            let mut accum = _mm_setzero_ps();
-            iptr.iter().zip(0..n).for_each(|(&curr_in, j)| {
-                let idx =
-                    (2 + (j + 1) * oversample as usize) - offset as usize;
-                let sinc_ptr: *const f32 = sinc_table[idx..].as_ptr();
-                accum = _mm_add_ps(
-                    accum,
-                    _mm_mul_ps(_mm_loadu_ps(sinc_ptr), _mm_set1_ps(curr_in)),
-                );
-            });
-            let mut interp = _mm_setzero_ps();
-            cubic_coef(frac, &mut interp);
-            let v = _mm_mul_ps(interp, accum);
-            out[(out_stride * out_sample) as usize] =
-                _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
-        }
-        #[cfg(not(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        )))]
-        {
-            let mut accum: [f32; 4] = [0.; 4];
-            iptr.iter().zip(0..n).for_each(|(&curr_in, j)| {
-                let idx =
-                    (2 + (j + 1) * oversample as usize) - offset as usize;
-                accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
-                    |(v, &s)| {
-                        *v += curr_in * s;
-                    },
-                );
-            });
-            let mut interp: [f32; 4] = [0.; 4];
-            cubic_coef(frac, &mut interp);
-            out[(out_stride * out_sample) as usize] = interp
-                .iter()
-                .zip(accum.iter())
-                .map(|(&x, &y)| x * y)
-                .fold(0., |acc, x| acc + x);
-        }
+        interpolate_step_single(
+            iptr,
+            out,
+            out_stride as usize,
+            out_sample as usize,
+            oversample as usize,
+            offset as usize,
+            n,
+            sinc_table,
+            frac,
+        );
 
         out_sample += 1;
         last_sample += int_advance;
@@ -922,41 +1218,6 @@ fn resampler_basic_interpolate_single(
     st.last_sample[channel_idx] = last_sample;
     st.samp_frac_num[channel_idx] = samp_frac_num;
     out_sample as i32
-}
-
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "sse2"
-))]
-unsafe fn cubic_coef(frac: f32, interp: &mut std::arch::x86_64::__m128) {
-    let mut interp_v = [0.0, 0.0, 0.0, 0.0];
-
-    interp_v[0] =
-        -0.16666999459266663 * frac + 0.16666999459266663 * frac * frac * frac;
-    interp_v[1] = frac + 0.5 * frac * frac - 0.5f32 * frac * frac * frac;
-    interp_v[3] = -0.3333300054073334 * frac + 0.5 * frac * frac
-        - 0.16666999459266663 * frac * frac * frac;
-    interp_v[2] = (1.0f64
-        - interp_v[0] as f64
-        - interp_v[1] as f64
-        - interp_v[3] as f64) as f32;
-
-    *interp = _mm_loadu_ps(interp_v.as_ptr());
-}
-
-#[cfg(not(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "sse2"
-)))]
-fn cubic_coef(frac: f32, interp: &mut [f32]) {
-    interp[0] =
-        -0.16666999459266663 * frac + 0.16666999459266663 * frac * frac * frac;
-    interp[1] = frac + 0.5 * frac * frac - 0.5f32 * frac * frac * frac;
-    interp[3] = -0.3333300054073334 * frac + 0.5 * frac * frac
-        - 0.16666999459266663 * frac * frac * frac;
-    interp[2] =
-        (1.0f64 - interp[0] as f64 - interp[1] as f64 - interp[3] as f64)
-            as f32;
 }
 
 fn resampler_basic_interpolate_double(
@@ -986,60 +1247,18 @@ fn resampler_basic_interpolate_double(
         let frac =
             (samp_frac_num * oversample % den_rate) as f32 / den_rate as f32;
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        ))]
-        unsafe {
-            #[cfg(target_arch = "x86")]
-            use std::arch::x86::*;
-            #[cfg(target_arch = "x86_64")]
-            use std::arch::x86_64::*;
+        interpolate_step_double(
+            iptr,
+            out,
+            out_stride as usize,
+            out_sample as usize,
+            oversample as usize,
+            offset as usize,
+            n,
+            sinc_table,
+            frac,
+        );
 
-            let mut accum = _mm256_setzero_pd();
-            iptr.iter().zip(0..n).for_each(|(&curr_in, j)| {
-                let idx =
-                    (2 + (j + 1) * oversample as usize) - offset as usize;
-                let sinct_ptr: *const f32 = sinc_table[idx..].as_ptr();
-                let v =
-                    _mm_mul_ps(_mm_loadu_ps(sinct_ptr), _mm_set1_ps(curr_in));
-                let v64 = convert_m128_to_m256d(v);
-                accum = _mm256_add_pd(accum, v64);
-            });
-
-            let mut interp = _mm_setzero_ps();
-            cubic_coef(frac, &mut interp);
-
-            let accum32 = _mm256_cvtpd_ps(accum);
-
-            let v = _mm_mul_ps(interp, accum32);
-            out[(out_stride * out_sample) as usize] =
-                _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
-        }
-
-        #[cfg(not(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        )))]
-        {
-            let mut accum: [f64; 4] = [0.0; 4];
-            iptr.iter().zip(0..n).for_each(|(&curr_in, j)| {
-                let idx =
-                    (2 + (j + 1) * oversample as usize) - offset as usize;
-                accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
-                    |(v, &s)| {
-                        *v += (curr_in * s) as f64;
-                    },
-                );
-            });
-            let mut interp: [f32; 4] = [0.; 4];
-            cubic_coef(frac, &mut interp);
-            out[(out_stride * out_sample) as usize] = interp
-                .iter()
-                .zip(accum.iter())
-                .map(|(&x, &y)| x * y as f32)
-                .fold(0., |acc, x| acc + x);
-        }
         out_sample += 1;
         last_sample += int_advance;
         samp_frac_num += frac_advance;
@@ -1294,7 +1513,7 @@ fn resampler_basic_direct_single(
     out: &mut [f32],
     out_len: &mut u32,
 ) -> i32 {
-    let n: i32 = st.filt_len as i32;
+    let n = st.filt_len as usize;
     let mut out_sample: u32 = 0;
     let mut last_sample = st.last_sample[channel_index as usize];
     let mut samp_frac_num = st.samp_frac_num[channel_index as usize];
@@ -1306,43 +1525,15 @@ fn resampler_basic_direct_single(
         let sinct: &[f32] =
             &st.sinc_table[(samp_frac_num * n as u32) as usize..];
         let iptr: &[f32] = &in_0[last_sample as usize..];
-        let mut j: i32 = 0;
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        ))]
-        unsafe {
-            #[cfg(target_arch = "x86")]
-            use std::arch::x86::*;
-            #[cfg(target_arch = "x86_64")]
-            use std::arch::x86_64::*;
-
-            let mut accum = _mm_setzero_ps();
-
-            while j < n {
-                let sinct_v = _mm_loadu_ps(sinct[j as usize..].as_ptr());
-                let iptr_v = _mm_loadu_ps(iptr[j as usize..].as_ptr());
-                accum = _mm_add_ps(accum, _mm_mul_ps(sinct_v, iptr_v));
-                j += 4
-            }
-
-            out[(out_stride * out_sample) as usize] =
-                _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(accum, accum), accum));
-        }
-
-        #[cfg(not(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        )))]
-        {
-            let mut sum: f32 = 0.0;
-            while j < n {
-                sum += sinct[j as usize] * iptr[j as usize];
-                j += 1
-            }
-            out[(out_stride * out_sample) as usize] = sum;
-        }
+        direct_step_single(
+            iptr,
+            out,
+            out_stride as usize,
+            out_sample as usize,
+            n,
+            sinct,
+        );
 
         out_sample += 1;
         last_sample += int_advance;
@@ -1365,7 +1556,7 @@ fn resampler_basic_direct_double(
     out: &mut [f32],
     out_len: &mut u32,
 ) -> i32 {
-    let n: i32 = st.filt_len as i32;
+    let n = st.filt_len as usize;
     let mut out_sample: u32 = 0;
     let mut last_sample = st.last_sample[channel_index as usize];
     let mut samp_frac_num = st.samp_frac_num[channel_index as usize];
@@ -1377,56 +1568,15 @@ fn resampler_basic_direct_double(
         let sinct: &[f32] =
             &st.sinc_table[(samp_frac_num * n as u32) as usize..];
         let iptr: &[f32] = &in_0[last_sample as usize..];
-        let mut j: i32 = 0;
 
-        #[cfg(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        ))]
-        unsafe {
-            #[cfg(target_arch = "x86")]
-            use std::arch::x86::*;
-            #[cfg(target_arch = "x86_64")]
-            use std::arch::x86_64::*;
-
-            let mut accum = _mm256_setzero_pd();
-
-            while j < n {
-                let sinct_v = _mm_loadu_ps(sinct[j as usize..].as_ptr());
-                let iptr_v = _mm_loadu_ps(iptr[j as usize..].as_ptr());
-                let v = _mm_mul_ps(sinct_v, iptr_v);
-
-                accum = _mm256_add_pd(accum, convert_m128_to_m256d(v));
-                j += 4;
-            }
-
-            out[(out_stride * out_sample) as usize] = hsum_m256d(accum) as f32;
-        }
-
-        #[cfg(not(all(
-            any(target_arch = "x86", target_arch = "x86_64"),
-            target_feature = "sse2"
-        )))]
-        {
-            let mut accum: [f64; 4] = [0.0; 4];
-            while j < n {
-                accum[0usize] +=
-                    f64::from(sinct[j as usize] * iptr[j as usize]);
-                accum[1usize] += f64::from(
-                    sinct[(j + 1) as usize] * iptr[(j + 1) as usize],
-                );
-                accum[2usize] += f64::from(
-                    sinct[(j + 2) as usize] * iptr[(j + 2) as usize],
-                );
-                accum[3usize] += f64::from(
-                    sinct[(j + 3) as usize] * iptr[(j + 3) as usize],
-                );
-                j += 4
-            }
-            let sum: f64 =
-                accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
-            out[(out_stride * out_sample) as usize] = sum as f32;
-        }
+        direct_step_double(
+            iptr,
+            out,
+            out_stride as usize,
+            out_sample as usize,
+            n,
+            sinct,
+        );
 
         out_sample += 1;
         last_sample += int_advance;
@@ -1527,86 +1677,4 @@ fn speex_resampler_magic<'a, 'b>(
     let value: &'b mut [f32] = mem::replace(out, &mut []);
     *out = &mut value[(out_len * st.out_stride as u32) as usize..];
     out_len
-}
-
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "sse2"
-))]
-#[inline]
-unsafe fn convert_m128_to_m256d(v: __m128) -> __m256d {
-    #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
-    #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
-
-    let v64 = _mm256_castpd128_pd256(_mm_cvtps_pd(v));
-    let v64 = _mm256_insertf128_pd(
-        v64,
-        _mm_cvtps_pd(_mm_shuffle_ps(v, v, 0b00001110)),
-        1,
-    );
-    v64
-}
-
-#[cfg(all(
-    any(target_arch = "x86", target_arch = "x86_64"),
-    target_feature = "sse2"
-))]
-#[inline]
-unsafe fn hsum_m256d(v: __m256d) -> f64 {
-    #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
-    #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
-
-    let low = _mm256_extractf128_pd(v, 0);
-    let high = _mm256_extractf128_pd(v, 1);
-    let low = _mm_add_pd(low, high);
-    let high64 = _mm_unpackhi_pd(low, low);
-    _mm_cvtsd_f64(_mm_add_sd(low, high64))
-}
-
-#[cfg(test)]
-mod tests {
-    #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
-    #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
-
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2"
-    ))]
-    #[test]
-    fn test_convert_m128_to_m256d() {
-        let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
-        let mut output: Vec<f64> = vec![0.0; 4];
-
-        unsafe {
-            let v = _mm_loadu_ps(input.as_ptr());
-            _mm256_storeu_pd(
-                output.as_mut_ptr(),
-                super::convert_m128_to_m256d(v),
-            );
-        }
-
-        assert_eq!(output, vec![1.0, 2.0, 3.0, 4.0]);
-    }
-
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2"
-    ))]
-    #[test]
-    fn test_hsum_m256d() {
-        let input: Vec<f64> = vec![1.0, 2.0, 3.0, 4.0];
-
-        let result = unsafe {
-            let v = _mm256_loadu_pd(input.as_ptr());
-            super::hsum_m256d(v)
-        };
-
-        assert_eq!(result as usize, 10 as usize);
-    }
 }
