@@ -306,7 +306,6 @@ impl SpeexResamplerState {
         if in_0.is_empty() {
             panic!("Empty input slice is not allowed");
         }
-        let mut j: u32;
         let istride_save = self.in_stride;
         let ostride_save = self.out_stride;
         let mut ilen = *in_len;
@@ -331,14 +330,14 @@ impl SpeexResamplerState {
                 olen -= omagic
             }
             if 0 == self.magic_samples[channel_index as usize] {
-                j = 0u32;
-                while j < ichunk {
-                    self.mem[mem_idx
-                        + j as usize
-                        + (self.filt_len - 1) as usize] =
-                        in_0[(j * istride_save) as usize] as f32;
-                    j += 1
-                }
+                self.mem
+                    .iter_mut()
+                    .zip(in_0.iter().step_by(istride_save as usize))
+                    .skip(mem_idx + (self.filt_len - 1) as usize)
+                    .take(ichunk as usize)
+                    .for_each(|(x, in_0_v)| {
+                        *x = *in_0_v as f32;
+                    });
                 speex_resampler_process_native(
                     self,
                     channel_index,
@@ -350,18 +349,20 @@ impl SpeexResamplerState {
                 ichunk = 0i32 as u32;
                 ochunk = 0i32 as u32
             }
-            j = 0u32;
-            while j < ochunk + omagic {
-                out[(j * ostride_save) as usize] =
-                    (if yselfack[j as usize] < -32767.5 {
+
+            out.iter_mut()
+                .step_by(ostride_save as usize)
+                .zip(yselfack.iter())
+                .for_each(|(x, y)| {
+                    *x = (if *y < -32767.5 {
                         -32768
-                    } else if yselfack[j as usize] > 32766.5 {
+                    } else if *y > 32766.5 {
                         32767
                     } else {
-                        (0.5 + yselfack[j as usize]).floor() as i32
-                    }) as i16;
-                j += 1
-            }
+                        (0.5 + *y).floor() as i32
+                    }) as i16
+                });
+
             ilen -= ichunk;
             olen -= ochunk;
             out = &mut out[(ochunk + omagic * ostride_save as u32) as usize..];
@@ -404,7 +405,7 @@ impl SpeexResamplerState {
 
         self.out_stride = self.nb_channels;
         self.in_stride = self.out_stride;
-        for i in 0..self.nb_channels as usize {
+        (0..self.nb_channels as usize).for_each(|i| {
             *out_len = bak_out_len;
             *in_len = bak_in_len;
             self.process_float(
@@ -414,7 +415,7 @@ impl SpeexResamplerState {
                 &mut out[i..],
                 out_len,
             );
-        }
+        });
         self.in_stride = istride_save;
         self.out_stride = ostride_save;
         let resampler = self.resampler_ptr.unwrap();
@@ -451,7 +452,7 @@ impl SpeexResamplerState {
 
         self.out_stride = self.nb_channels;
         self.in_stride = self.out_stride;
-        for i in 0..self.nb_channels as usize {
+        (0..self.nb_channels as usize).for_each(|i| {
             *out_len = bak_out_len;
             *in_len = bak_in_len;
             self.process_int(
@@ -461,7 +462,7 @@ impl SpeexResamplerState {
                 &mut out[i..],
                 out_len,
             );
-        }
+        });
         self.in_stride = istride_save;
         self.out_stride = ostride_save;
         let resampler = self.resampler_ptr.unwrap();
@@ -1082,18 +1083,29 @@ mod sse2 {
         sinc_table: &[f32],
     ) {
         unsafe {
-            let mut accum = _mm_setzero_ps();
-            let mut j = 0;
+            let accum = sinc_table
+                .chunks_exact(8)
+                .zip(in_slice.chunks_exact(8))
+                .take((n as usize) / 8)
+                .fold(_mm_setzero_ps(), |acc, (sinct_p, iptr_p)| {
+                    let sinct_v = _mm_loadu_ps(sinct_p.as_ptr());
+                    let iptr_v = _mm_loadu_ps(iptr_p.as_ptr());
 
-            while j < n {
-                let sinct_v = _mm_loadu_ps(sinc_table[j as usize..].as_ptr());
-                let iptr_v = _mm_loadu_ps(in_slice[j as usize..].as_ptr());
-                accum = _mm_add_ps(accum, _mm_mul_ps(sinct_v, iptr_v));
-                j += 4
-            }
+                    let acc = _mm_add_ps(acc, _mm_mul_ps(sinct_v, iptr_v));
 
-            out_slice[(out_stride * out_sample) as usize] =
-                _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(accum, accum), accum));
+                    let sinct_v = _mm_loadu_ps(sinct_p[4..].as_ptr());
+                    let iptr_v = _mm_loadu_ps(iptr_p[4..].as_ptr());
+                    _mm_add_ps(acc, _mm_mul_ps(sinct_v, iptr_v))
+                });
+
+            let accum = _mm_add_ps(accum, _mm_movehl_ps(accum, accum));
+            let accum =
+                _mm_add_ss(accum, _mm_shuffle_ps(accum, accum, 0b01010101));
+
+            _mm_store_ss(
+                out_slice[((out_stride * out_sample) as usize)..].as_mut_ptr(),
+                accum,
+            )
         }
     }
 
@@ -1621,7 +1633,7 @@ fn speex_resampler_process_native(
     out: &mut [f32],
     out_len: &mut u32,
 ) -> usize {
-    let n: i32 = st.filt_len as i32;
+    let n: usize = st.filt_len as usize;
     let mem_idx = (channel_index * st.mem_alloc_size) as usize;
     st.started = 1;
     let mem = &st.mem.clone();
@@ -1638,13 +1650,11 @@ fn speex_resampler_process_native(
     }
     *out_len = out_sample as u32;
     st.last_sample[channel_index as usize] -= *in_len;
-    let ilen: u32 = *in_len;
-    let mut j: i32 = 0;
-    while j < n - 1 {
-        st.mem[mem_idx + j as usize] =
-            st.mem[mem_idx + (j as u32 + ilen) as usize];
-        j += 1
-    }
+    let ilen = *in_len as usize;
+
+    st.mem[mem_idx..(mem_idx + n - 1)]
+        .copy_from_slice(&mem[(mem_idx + ilen)..(mem_idx + ilen + n - 1)]);
+
     RESAMPLER_ERR_SUCCESS
 }
 
