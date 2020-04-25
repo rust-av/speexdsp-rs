@@ -35,3 +35,19 @@ harness = false
 [[bench]]
 name = "resampling_rust"
 harness = false
+
+[[bench]]
+name = "resampling_simple_rust"
+harness = false
+
+[[bench]]
+name = "resampling_simple_c"
+harness = false
+
+[[bench]]
+name = "resampling_simple_rust_dbl"
+harness = false
+
+[[bench]]
+name = "resampling_simple_c_dbl"
+harness = false
