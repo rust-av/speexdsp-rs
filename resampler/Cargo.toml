@@ -10,5 +10,8 @@ license = "BSD-3-Clause"
 readme = "README.md"
 edition = "2018"
 
+[features]
+sse3 = []
+
 [dependencies]
 cfg-if = "0.1.10"
