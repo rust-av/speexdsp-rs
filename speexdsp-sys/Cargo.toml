@@ -13,7 +13,7 @@ categories = ["api-bindings"]
 [build-dependencies]
 autotools = "0.2"
 metadeps = "1.1"
-bindgen = "0.53"
+bindgen = "0.54"
 
 [dev-dependencies]
 byteorder = "1.3"
