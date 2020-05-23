@@ -4,25 +4,25 @@ use std::arch::x86::*;
 use std::arch::x86_64::*;
 
 #[inline(always)]
-pub unsafe fn swap_lo_and_hi(v: __m128) -> __m128 {
+unsafe fn swap_lo_and_hi(v: __m128) -> __m128 {
     _mm_shuffle_ps(v, v, 0b01001110)
 }
 
 #[inline(always)]
-pub unsafe fn sum_m128_into_m128d(v: __m128) -> __m128d {
+unsafe fn sum_m128_into_m128d(v: __m128) -> __m128d {
     let a = _mm_cvtps_pd(v);
     let b = _mm_cvtps_pd(swap_lo_and_hi(v));
     _mm_add_pd(a, b)
 }
 
 #[inline(always)]
-pub unsafe fn split_m128_into_m128d(v: __m128) -> (__m128d, __m128d) {
+unsafe fn split_m128_into_m128d(v: __m128) -> (__m128d, __m128d) {
     let a = _mm_cvtps_pd(v);
     let b = _mm_cvtps_pd(swap_lo_and_hi(v));
     (a, b)
 }
 
-pub unsafe fn hsum_m128d(v: __m128d) -> f64 {
+unsafe fn hsum_m128d(v: __m128d) -> f64 {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
