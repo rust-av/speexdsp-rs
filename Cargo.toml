@@ -14,6 +14,7 @@ edition = "2018"
 [features]
 sys = ["speexdsp-sys"]
 sse3 = [ "speexdsp-resampler/sse3" ]
+avx = [ "speexdsp-resampler/avx" ]
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"

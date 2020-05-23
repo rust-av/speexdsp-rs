@@ -12,6 +12,7 @@ edition = "2018"
 
 [features]
 sse3 = []
+avx = []
 
 [dependencies]
 cfg-if = "0.1.10"
