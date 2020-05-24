@@ -532,17 +532,15 @@ impl SpeexResamplerState {
             self.num_rate = ratio_num as u32;
             self.den_rate = ratio_den as u32;
             let fact = _gcd(self.num_rate, self.den_rate);
-            self.num_rate = self.num_rate / fact;
-            self.den_rate = self.den_rate / fact;
+            self.num_rate /= fact;
+            self.den_rate /= fact;
             if old_den > 0 {
                 for val in &mut self.samp_frac_num {
                     let res = _muldiv(val, *val, self.den_rate, old_den);
                     if res != RESAMPLER_ERR_SUCCESS {
                         return RESAMPLER_ERR_OVERFLOW;
-                    } else {
-                        if *val >= self.den_rate {
-                            *val = self.den_rate - 1;
-                        }
+                    } else if *val >= self.den_rate {
+                        *val = self.den_rate - 1;
                     }
                 }
             }
@@ -766,10 +764,11 @@ impl SpeexResamplerState {
                 / self.den_rate as u64
                 >= self.filt_len as u64;
 
-        let mut min_sinc_table_length = self.filt_len * self.den_rate;
-        if !use_direct {
-            min_sinc_table_length = self.filt_len * self.oversample + 8;
-        }
+        let min_sinc_table_length = if !use_direct {
+            self.filt_len * self.oversample + 8
+        } else {
+            self.filt_len * self.den_rate
+        };
 
         if self.sinc_table_length < min_sinc_table_length {
             self.sinc_table = vec![0.0; min_sinc_table_length as usize];
@@ -799,7 +798,7 @@ impl SpeexResamplerState {
         } else if self.filt_len < old_length {
             self.chunks_iterator(old_length, self.mem_alloc_size as usize, 2);
         }
-        return RESAMPLER_ERR_SUCCESS;
+        RESAMPLER_ERR_SUCCESS
     }
 }
 
@@ -820,7 +819,7 @@ fn resampler_basic_zero(
     let den_rate: u32 = st.den_rate;
     while !(last_sample >= *in_len || out_sample >= *out_len) {
         out[(out_stride * out_sample) as usize] = 0.0;
-        out_sample = out_sample + 1;
+        out_sample += 1;
         last_sample += int_advance;
         samp_frac_num += frac_advance as u32;
         if samp_frac_num >= den_rate {
@@ -945,83 +944,17 @@ fn resampler_basic_interpolate_double(
 }
 
 static QUALITY_MAP: [QualityMapping; 11] = [
-    QualityMapping::new(
-        8,
-        4,
-        0.8299999833106995,
-        0.8600000143051148,
-        &_KAISER6,
-    ),
-    QualityMapping::new(
-        16,
-        4,
-        0.8500000238418579,
-        0.8799999952316284,
-        &_KAISER6,
-    ),
-    QualityMapping::new(
-        32,
-        4,
-        0.8820000290870667,
-        0.9100000262260437,
-        &_KAISER6,
-    ),
-    QualityMapping::new(
-        48,
-        8,
-        0.8949999809265137,
-        0.9169999957084656,
-        &_KAISER8,
-    ),
-    QualityMapping::new(
-        64,
-        8,
-        0.9210000038146973,
-        0.9399999976158142,
-        &_KAISER8,
-    ),
-    QualityMapping::new(
-        80,
-        16,
-        0.921999990940094,
-        0.9399999976158142,
-        &_KAISER10,
-    ),
-    QualityMapping::new(
-        96,
-        16,
-        0.9399999976158142,
-        0.9449999928474426,
-        &_KAISER10,
-    ),
-    QualityMapping::new(
-        128,
-        16,
-        0.949999988079071,
-        0.949999988079071,
-        &_KAISER10,
-    ),
-    QualityMapping::new(
-        160,
-        16,
-        0.9599999785423279,
-        0.9599999785423279,
-        &_KAISER10,
-    ),
-    QualityMapping::new(
-        192,
-        32,
-        0.9679999947547913,
-        0.9679999947547913,
-        &_KAISER12,
-    ),
-    QualityMapping::new(
-        256,
-        32,
-        0.9750000238418579,
-        0.9750000238418579,
-        &_KAISER12,
-    ),
+    QualityMapping::new(8, 4, 0.83, 0.86, &_KAISER6),
+    QualityMapping::new(16, 4, 0.85, 0.88, &_KAISER6),
+    QualityMapping::new(32, 4, 0.882, 0.91, &_KAISER6),
+    QualityMapping::new(48, 8, 0.895, 0.917, &_KAISER8),
+    QualityMapping::new(64, 8, 0.921, 0.94, &_KAISER8),
+    QualityMapping::new(80, 16, 0.922, 0.94, &_KAISER10),
+    QualityMapping::new(96, 16, 0.94, 0.945, &_KAISER10),
+    QualityMapping::new(128, 16, 0.95, 0.95, &_KAISER10),
+    QualityMapping::new(160, 16, 0.96, 0.96, &_KAISER10),
+    QualityMapping::new(192, 32, 0.968, 0.968, &_KAISER12),
+    QualityMapping::new(256, 32, 0.975, 0.975, &_KAISER12),
 ];
 
 static _KAISER12: FuncDef = FuncDef::new(&KAISER12_TABLE, 64);
@@ -1065,7 +998,7 @@ static KAISER12_TABLE: [f64; 68] = {
         0.19416736,
         0.17404546,
         0.15530766,
-        0.13794293999999999,
+        0.13794294,
         0.12192957,
         0.10723616,
         0.09382272,

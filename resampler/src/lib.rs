@@ -1,3 +1,5 @@
+#![allow(clippy::unreadable_literal)]
+
 mod speex;
 
 pub struct State {
