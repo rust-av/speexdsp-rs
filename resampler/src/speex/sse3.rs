@@ -35,11 +35,10 @@ pub unsafe fn hsum_m128d(v: __m128d) -> f64 {
 pub unsafe fn cubic_coef(frac: f32, interp: &mut std::arch::x86_64::__m128) {
     let mut interp_v = [0.0, 0.0, 0.0, 0.0];
 
-    interp_v[0] =
-        -0.16666999459266663 * frac + 0.16666999459266663 * frac * frac * frac;
+    interp_v[0] = -0.166_67 * frac + 0.166_67 * frac * frac * frac;
     interp_v[1] = frac + 0.5 * frac * frac - 0.5f32 * frac * frac * frac;
-    interp_v[3] = -0.3333300054073334 * frac + 0.5 * frac * frac
-        - 0.16666999459266663 * frac * frac * frac;
+    interp_v[3] =
+        -0.333_33 * frac + 0.5 * frac * frac - 0.166_67 * frac * frac * frac;
     interp_v[2] = (1.0f64
         - interp_v[0] as f64
         - interp_v[1] as f64
@@ -48,6 +47,7 @@ pub unsafe fn cubic_coef(frac: f32, interp: &mut std::arch::x86_64::__m128) {
     *interp = _mm_loadu_ps(interp_v.as_ptr());
 }
 
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 pub fn interpolate_step_single(
     in_slice: &[f32],
@@ -78,6 +78,8 @@ pub fn interpolate_step_single(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+#[inline(always)]
 pub fn interpolate_step_double(
     in_slice: &[f32],
     out_slice: &mut [f32],

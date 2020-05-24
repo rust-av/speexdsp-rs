@@ -1,15 +1,15 @@
 #[inline(always)]
 pub fn cubic_coef(frac: f32, interp: &mut [f32]) {
-    interp[0] =
-        -0.16666999459266663 * frac + 0.16666999459266663 * frac * frac * frac;
+    interp[0] = -0.166_67 * frac + 0.166_67 * frac * frac * frac;
     interp[1] = frac + 0.5 * frac * frac - 0.5f32 * frac * frac * frac;
-    interp[3] = -0.3333300054073334 * frac + 0.5 * frac * frac
-        - 0.16666999459266663 * frac * frac * frac;
+    interp[3] =
+        -0.333_33 * frac + 0.5 * frac * frac - 0.166_67 * frac * frac * frac;
     interp[2] =
         (1.0f64 - interp[0] as f64 - interp[1] as f64 - interp[3] as f64)
             as f32;
 }
 
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 pub fn interpolate_step_single(
     in_slice: &[f32],
@@ -40,6 +40,7 @@ pub fn interpolate_step_single(
         .fold(0., |acc, x| acc + x);
 }
 
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 pub fn interpolate_step_double(
     in_slice: &[f32],
