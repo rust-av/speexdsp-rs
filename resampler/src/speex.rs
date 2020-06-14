@@ -833,7 +833,9 @@ fn resampler_basic_zero(
 }
 
 cfg_if! {
-    if #[cfg(feature = "avx")] {
+    if #[cfg(feature = "dynnative")] {
+        use dynnative::*;
+    } else if #[cfg(feature = "avx")] {
         use avx::*;
     } else if #[cfg(feature = "sse3")] {
         use sse3::*;
@@ -1286,7 +1288,8 @@ fn speex_resampler_magic<'a, 'b>(
 
 #[cfg(feature = "avx")]
 mod avx;
-#[cfg(not(any(feature = "sse3", feature = "avx")))]
+#[cfg(feature = "dynnative")]
+mod dynnative;
 mod native;
-#[cfg(any(feature = "sse3", feature = "avx"))]
+#[cfg(feature = "sse3")]
 mod sse3;

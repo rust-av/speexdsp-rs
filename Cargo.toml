@@ -15,6 +15,7 @@ edition = "2018"
 sys = ["speexdsp-sys"]
 sse3 = [ "speexdsp-resampler/sse3" ]
 avx = [ "speexdsp-resampler/avx" ]
+dynnative = [ "speexdsp-resampler/dynnative" ]
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
