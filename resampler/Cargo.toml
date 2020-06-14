@@ -12,7 +12,8 @@ edition = "2018"
 
 [features]
 sse3 = []
-avx = []
+avx = ["sse3"]
+dynnative = ["avx"]
 
 [dependencies]
 cfg-if = "0.1.10"
