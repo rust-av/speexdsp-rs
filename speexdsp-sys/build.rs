@@ -1,6 +1,6 @@
 extern crate autotools;
 extern crate bindgen;
-extern crate metadeps;
+extern crate system_deps;
 
 use std::env;
 use std::fs::File;
@@ -17,14 +17,14 @@ fn format_write(builder: bindgen::Builder) -> String {
 }
 
 fn main() {
-    if cfg!(feature = "build") {
-        // TODO: decide how to fetch the source
-        let dst = autotools::build("speexdsp");
-
-        env::set_var("PKG_CONFIG_PATH", dst.join("lib/pkgconfig"));
-    }
-
-    let libs = metadeps::probe().unwrap();
+    let libs = system_deps::Config::new()
+        .add_build_internal("speexdsp", |lib, version| {
+            // TODO: decide how to fetch the source
+            let dst = autotools::build("speexdsp");
+            system_deps::Library::from_internal_pkg_config(&dst, lib, version)
+        })
+        .probe()
+        .unwrap();
 
     let headers = libs.get("speexdsp").unwrap().include_paths.clone();
 
