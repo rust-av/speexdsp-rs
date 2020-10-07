@@ -16,4 +16,4 @@ avx = ["sse3"]
 dynnative = ["avx"]
 
 [dependencies]
-cfg-if = "0.1.10"
+cfg-if = "1.0.0"
