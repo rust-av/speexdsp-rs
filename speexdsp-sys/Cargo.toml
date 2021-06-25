@@ -12,7 +12,7 @@ categories = ["api-bindings"]
 
 [build-dependencies]
 autotools = "0.2"
-system-deps = "2.0"
+system-deps = "3.1"
 bindgen = "0.55"
 
 [dev-dependencies]
