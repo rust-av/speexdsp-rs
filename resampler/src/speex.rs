@@ -759,7 +759,7 @@ impl SpeexResamplerState {
 
         let use_direct = self.filt_len * self.den_rate
             <= self.filt_len * self.oversample + 8
-            && 2147483647 as u64
+            && 2147483647u64
                 / ::std::mem::size_of::<f32>() as u64
                 / self.den_rate as u64
                 >= self.filt_len as u64;
@@ -1281,7 +1281,7 @@ fn speex_resampler_magic<'a, 'b>(
             .take(st.magic_samples[channel_idx] as usize)
             .for_each(|(x, &y)| *x = y);
     }
-    let value: &'b mut [f32] = mem::replace(out, &mut []);
+    let value: &'b mut [f32] = mem::take(out);
     *out = &mut value[(out_len * st.out_stride as u32) as usize..];
     out_len
 }
