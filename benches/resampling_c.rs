@@ -65,7 +65,7 @@ fn resample_c() {
 fn resample_c() {}
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("resampler_c", |b| b.iter(|| resample_c()));
+    c.bench_function("resampler_c", |b| b.iter(resample_c));
 }
 
 criterion_group! {

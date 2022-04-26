@@ -44,7 +44,7 @@ pub struct DrftLookup {
 impl DrftLookup {
     pub fn new(n: usize) -> Self {
         let mut drft = Self {
-            n: n,
+            n,
             trigcache: vec![0.0; 3 * n],
             splitcache: vec![0; 32],
         };
