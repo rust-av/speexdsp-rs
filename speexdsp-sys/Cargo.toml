@@ -12,8 +12,8 @@ categories = ["api-bindings"]
 
 [build-dependencies]
 autotools = "0.2"
-system-deps = "2.0"
-bindgen = "0.55"
+system-deps = "6.0"
+bindgen = "0.59.2"
 
 [dev-dependencies]
 byteorder = "1.3"

@@ -26,12 +26,15 @@ fn main() {
         .probe()
         .unwrap();
 
-    let headers = libs.get("speexdsp").unwrap().include_paths.clone();
+    let headers = libs.get_by_name("speexdsp").unwrap().include_paths.clone();
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     for e in ["echo", "jitter", "preprocess", "resampler"].iter() {
-        let mut builder = bindgen::builder().header(format!("data/{}.h", e));
+        let mut builder = bindgen::builder()
+            .size_t_is_usize(true)
+            .layout_tests(false)
+            .header(format!("data/{}.h", e));
 
         for header in headers.iter() {
             builder =
