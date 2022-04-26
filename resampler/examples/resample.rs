@@ -35,7 +35,7 @@ fn main() {
         let prev_out_len = out_len;
 
         let (in_len, out_len) = st
-            .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
+            .process(0, &fin[off..off + in_len], &mut fout[..out_len])
             .unwrap();
 
         eprintln!(

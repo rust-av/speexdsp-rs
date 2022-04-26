@@ -246,8 +246,7 @@ pub mod native {
             input: &[f32],
             output: &mut [f32],
         ) -> Result<(usize, usize), Error> {
-            State::process_float(self, index, input, output)
-                .map_err(|e| e.into())
+            State::process(self, index, input, output).map_err(|e| e.into())
         }
         fn skip_zeros(&mut self) {
             State::skip_zeros(self);
