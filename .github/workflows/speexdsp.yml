@@ -38,8 +38,8 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "::set-env name=PKG_CONFIG_PATH::$HOME/$SPEEX_DIR/lib/pkgconfig"
-        echo "::set-env name=LD_LIBRARY_PATH::$HOME/$SPEEX_DIR/lib"
+        echo PKG_CONFIG_PATH="$HOME/$SPEEX_DIR/lib/pkgconfig" >> $GITHUB_ENV
+        echo LD_LIBRARY_PATH="$HOME/$SPEEX_DIR/lib" >> $GITHUB_ENV
 
     - name: Run clippy
       uses: actions-rs/clippy-check@v1
@@ -80,8 +80,8 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "::set-env name=PKG_CONFIG_PATH::$HOME/$SPEEX_DIR/lib/pkgconfig"
-        echo "::set-env name=LD_LIBRARY_PATH::$HOME/$SPEEX_DIR/lib"
+        echo PKG_CONFIG_PATH="$HOME/$SPEEX_DIR/lib/pkgconfig" >> $GITHUB_ENV
+        echo LD_LIBRARY_PATH="$HOME/$SPEEX_DIR/lib" >> $GITHUB_ENV
 
     - name: Run benchmark
       if: matrix.conf != 'tests'
