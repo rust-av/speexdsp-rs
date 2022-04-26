@@ -12,6 +12,113 @@ pub enum Error {
     InvalidArg,
 }
 
+pub trait Sample: Copy + Clone {
+    fn process(
+        st: &mut speex::SpeexResamplerState,
+        index: usize,
+        input: &[Self],
+        output: &mut [Self],
+    ) -> Result<(usize, usize), Error>;
+
+    fn process_interleaved(
+        st: &mut speex::SpeexResamplerState,
+        input: &[Self],
+        output: &mut [Self],
+    ) -> Result<(usize, usize), Error>;
+}
+
+impl Sample for i16 {
+    fn process(
+        st: &mut speex::SpeexResamplerState,
+        index: usize,
+        input: &[i16],
+        output: &mut [i16],
+    ) -> Result<(usize, usize), Error> {
+        let mut in_len = input.len() as u32;
+        let mut out_len = output.len() as u32;
+        let ret = st.process_int(
+            index as u32,
+            input,
+            &mut in_len,
+            output,
+            &mut out_len,
+        );
+
+        if ret != 0 {
+            Err(Error::AllocFailed)
+        } else {
+            Ok((in_len as usize, out_len as usize))
+        }
+    }
+
+    fn process_interleaved(
+        st: &mut speex::SpeexResamplerState,
+        input: &[i16],
+        output: &mut [i16],
+    ) -> Result<(usize, usize), Error> {
+        let mut in_len = input.len() as u32;
+        let mut out_len = output.len() as u32;
+        let ret = st.process_interleaved_int(
+            input,
+            &mut in_len,
+            output,
+            &mut out_len,
+        );
+
+        if ret != 0 {
+            Err(Error::AllocFailed)
+        } else {
+            Ok((in_len as usize, out_len as usize))
+        }
+    }
+}
+
+impl Sample for f32 {
+    fn process(
+        st: &mut speex::SpeexResamplerState,
+        index: usize,
+        input: &[f32],
+        output: &mut [f32],
+    ) -> Result<(usize, usize), Error> {
+        let mut in_len = input.len() as u32;
+        let mut out_len = output.len() as u32;
+        let ret = st.process_float(
+            index as u32,
+            input,
+            &mut in_len,
+            output,
+            &mut out_len,
+        );
+
+        if ret != 0 {
+            Err(Error::AllocFailed)
+        } else {
+            Ok((in_len as usize, out_len as usize))
+        }
+    }
+
+    fn process_interleaved(
+        st: &mut speex::SpeexResamplerState,
+        input: &[f32],
+        output: &mut [f32],
+    ) -> Result<(usize, usize), Error> {
+        let mut in_len = input.len() as u32;
+        let mut out_len = output.len() as u32;
+        let ret = st.process_interleaved_float(
+            input,
+            &mut in_len,
+            output,
+            &mut out_len,
+        );
+
+        if ret != 0 {
+            Err(Error::AllocFailed)
+        } else {
+            Ok((in_len as usize, out_len as usize))
+        }
+    }
+}
+
 impl State {
     pub fn new(
         channels: usize,
@@ -46,27 +153,21 @@ impl State {
         self.st.get_ratio()
     }
 
-    pub fn process_float(
+    pub fn process<S: Sample>(
         &mut self,
         index: usize,
-        input: &[f32],
-        output: &mut [f32],
+        input: &[S],
+        output: &mut [S],
     ) -> Result<(usize, usize), Error> {
-        let mut in_len = input.len() as u32;
-        let mut out_len = output.len() as u32;
-        let ret = self.st.process_float(
-            index as u32,
-            input,
-            &mut in_len,
-            output,
-            &mut out_len,
-        );
+        S::process(&mut self.st, index, input, output)
+    }
 
-        if ret != 0 {
-            Err(Error::AllocFailed)
-        } else {
-            Ok((in_len as usize, out_len as usize))
-        }
+    pub fn process_interleaved<S: Sample>(
+        &mut self,
+        input: &[S],
+        output: &mut [S],
+    ) -> Result<(usize, usize), Error> {
+        S::process_interleaved(&mut self.st, input, output)
     }
 
     pub fn skip_zeros(&mut self) {
