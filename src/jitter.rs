@@ -50,6 +50,12 @@ mod sys {
         }
     }
 
+    impl Default for SpeexBufferPacket {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl Error {
         fn from_i32(v: i32) -> Self {
             match v {
@@ -70,7 +76,7 @@ mod sys {
     impl SpeexBufferPacket {
         pub fn new() -> Self {
             let pt = JitterBufferPacket {
-                data: 0 as *mut i8,
+                data: std::ptr::null_mut(),
                 len: 0,
                 timestamp: 0,
                 span: 0,
@@ -103,6 +109,10 @@ mod sys {
 
         pub fn len(&self) -> usize {
             self.pt.len as usize
+        }
+
+        pub fn is_empty(&self) -> bool {
+            self.pt.len != 0
         }
 
         pub fn timestamp(&self) -> usize {

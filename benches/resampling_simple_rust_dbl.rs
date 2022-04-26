@@ -21,9 +21,7 @@ fn resample_rs() {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("resampler_simple_rust_dbl", |b| {
-        b.iter(|| resample_rs())
-    });
+    c.bench_function("resampler_simple_rust_dbl", |b| b.iter(resample_rs));
 }
 
 criterion_group! {

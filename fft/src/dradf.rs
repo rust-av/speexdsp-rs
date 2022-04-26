@@ -8,11 +8,11 @@ pub(crate) fn dradf2(
     let mut t1 = 0;
     let mut t2 = l1 * ido;
     let t0 = t2;
-    let mut t3 = ido << 1 as i32;
+    let mut t3 = ido << 1;
 
     for _ in 0..l1 {
         ch[(t1 as usize) << 1] = cc[t1 as usize] + cc[t2 as usize];
-        ch[(t1 as usize) << 1 + t3 as usize - 1] =
+        ch[(t1 as usize) << (1 + t3 as usize - 1)] =
             cc[t1 as usize] - cc[t2 as usize];
         t1 += ido;
         t2 += ido;
@@ -76,7 +76,7 @@ pub(crate) fn dradf4(
     wa2: &[f32],
     wa3: &[f32],
 ) {
-    const HSQT2: f32 = 0.707_106_781_186_547_52;
+    const HSQT2: f32 = 0.70710677;
 
     let t0 = l1 * ido;
     let mut t1 = t0;
@@ -188,19 +188,19 @@ fn dradfg_l102(
     ch: &mut [f32],
 ) {
     let mut is = -ido;
-    let mut t1 = 0 as i32;
+    let mut t1 = 0;
     if nbd > l1 {
         for _ in 1..ip {
             t1 += t0;
             is += ido;
             let mut t2 = -ido + t1;
             for _ in 0..l1 {
-                let mut idij = is - 1 as i32;
+                let mut idij = is - 1;
                 t2 += ido;
                 let mut t3 = t2;
                 for _ in (2..ido as usize).step_by(2) {
-                    idij += 2 as i32;
-                    t3 += 2 as i32;
+                    idij += 2;
+                    t3 += 2;
                     ch[t3 as usize - 1] = wa[idij as usize - 1]
                         * cc[t3 as usize - 1]
                         + wa[idij as usize] * cc[t3 as usize];
@@ -212,12 +212,12 @@ fn dradfg_l102(
     } else {
         for _ in 0..ip {
             is += ido;
-            let mut idij = is - 1 as i32;
+            let mut idij = is - 1;
             t1 += t0;
             let mut t2 = t1;
             for _ in (2..ido as usize).step_by(2) {
-                idij += 2 as i32;
-                t2 += 2 as i32;
+                idij += 2;
+                t2 += 2;
                 let mut t3 = t2;
                 for _ in 0..l1 {
                     ch[t3 as usize - 1] = wa[idij as usize - 1]
@@ -243,7 +243,7 @@ fn dradfg_l103(
     ch: &[f32],
     cc: &mut [f32],
 ) {
-    let mut t1 = 0 as i32;
+    let mut t1 = 0;
     let mut t2 = ipp2 * t0;
     if nbd < l1 {
         for _ in 1..ipph {
@@ -252,8 +252,8 @@ fn dradfg_l103(
             let mut t3 = t1;
             let mut t4 = t2;
             for _ in (2..ido as usize).step_by(2) {
-                t3 += 2 as i32;
-                t4 += 2 as i32;
+                t3 += 2;
+                t4 += 2;
                 let mut t5 = t3 - ido;
                 let mut t6 = t4 - ido;
                 for _ in 0..l1 {
@@ -278,8 +278,8 @@ fn dradfg_l103(
                 let mut t5 = t3;
                 let mut t6 = t4;
                 for _ in (2..ido as usize).step_by(2) {
-                    t5 += 2 as i32;
-                    t6 += 2 as i32;
+                    t5 += 2;
+                    t6 += 2;
                     cc[t5 as usize - 1] =
                         ch[t5 as usize - 1] + ch[t6 as usize - 1];
                     cc[t6 as usize - 1] = ch[t5 as usize] - ch[t6 as usize];
@@ -310,15 +310,15 @@ fn dradfg_l104(
 ) {
     if nbd < l1 {
         let mut t1 = -ido;
-        let mut t3 = 0 as i32;
-        let mut t4 = 0 as i32;
+        let mut t3 = 0;
+        let mut t4 = 0;
         let mut t5 = ipp2 * t0;
         for _ in 1..ipph {
             t1 += t2;
             t3 += t2;
             t4 += t0;
             t5 -= t0;
-            for i in (2..ido as i32).step_by(2) {
+            for i in (2..ido).step_by(2) {
                 let mut t6 = idp2 + t1 - i;
                 let mut t7 = i + t3;
                 let mut t8 = i + t4;
@@ -339,8 +339,8 @@ fn dradfg_l104(
         }
     } else {
         let mut t1 = -ido;
-        let mut t3 = 0 as i32;
-        let mut t4 = 0 as i32;
+        let mut t3 = 0;
+        let mut t4 = 0;
         let mut t5 = ipp2 * t0;
         for _ in 1..ipph {
             t1 += t2;
@@ -381,15 +381,13 @@ pub(crate) fn dradfg(
     ch: &mut [f32],
     wa: &[f32],
 ) {
-    const TPI: f32 = 6.283_185_307_179_586;
-
-    let arg = TPI / ip as f32;
+    let arg = std::f32::consts::TAU / ip as f32;
     let dcp = f64::cos(arg as f64) as f32;
     let dsp = f64::sin(arg as f64) as f32;
-    let ipph = ip + 1 >> 1;
+    let ipph = (ip + 1) >> 1;
     let ipp2 = ip;
     let idp2 = ido;
-    let nbd = ido - 1 >> 1;
+    let nbd = (ido - 1) >> 1;
     let t0 = l1 * ido;
     let t10 = ip * ido;
 
@@ -417,7 +415,7 @@ pub(crate) fn dradfg(
         cc[ik as usize] = ch[ik as usize];
     }
 
-    let mut t1 = 0 as i32;
+    let mut t1 = 0;
     let mut t2 = ipp2 * idl1;
     for _ in 1..ipph {
         t1 += t0;
@@ -434,9 +432,9 @@ pub(crate) fn dradfg(
 
     let mut ar1: f32 = 1.0;
     let mut ai1: f32 = 0.0;
-    t1 = 0 as i32;
+    t1 = 0;
     t2 = ipp2 * idl1;
-    let mut t3 = (ip - 1 as i32) * idl1;
+    let mut t3 = (ip - 1) * idl1;
 
     for _ in 1..ipph {
         t1 += idl1;
@@ -450,14 +448,14 @@ pub(crate) fn dradfg(
         let mut t7 = idl1;
         for ik in 0..idl1 {
             let fresh2 = t7;
-            t7 = t7 + 1;
+            t7 += 1;
             let fresh3 = t4;
-            t4 = t4 + 1;
+            t4 += 1;
             ch[fresh3 as usize] = cc[ik as usize] + ar1 * cc[fresh2 as usize];
             let fresh4 = t6;
-            t6 = t6 + 1;
+            t6 += 1;
             let fresh5 = t5;
-            t5 = t5 + 1;
+            t5 += 1;
             ch[fresh5 as usize] = ai1 * cc[fresh4 as usize];
         }
         let dc2 = ar1;
@@ -465,7 +463,7 @@ pub(crate) fn dradfg(
         let mut ar2 = ar1;
         let mut ai2 = ai1;
         t4 = idl1;
-        t5 = (ipp2 - 1 as i32) * idl1;
+        t5 = (ipp2 - 1) * idl1;
         for _ in 2..ipph {
             t4 += idl1;
             t5 -= idl1;
@@ -478,26 +476,26 @@ pub(crate) fn dradfg(
             let mut t9 = t5;
             for _ in 0..idl1 {
                 let fresh6 = t8;
-                t8 = t8 + 1;
+                t8 += 1;
                 let fresh7 = t6;
-                t6 = t6 + 1;
+                t6 += 1;
                 ch[fresh7 as usize] += ar2 * cc[fresh6 as usize];
                 let fresh8 = t9;
-                t9 = t9 + 1;
+                t9 += 1;
                 let fresh9 = t7;
-                t7 = t7 + 1;
+                t7 += 1;
                 ch[fresh9 as usize] += ai2 * cc[fresh8 as usize];
             }
         }
     }
 
-    t1 = 0 as i32;
+    t1 = 0;
     for _ in 1..ipph {
         t1 += idl1;
         t2 = t1;
         for ik in 0..idl1 {
             let fresh10 = t2;
-            t2 = t2 + 1;
+            t2 += 1;
             ch[ik as usize] += cc[fresh10 as usize];
         }
     }
@@ -513,16 +511,16 @@ pub(crate) fn dradfg(
             }
         }
     } else {
-        t1 = 0 as i32;
-        t2 = 0 as i32;
+        t1 = 0;
+        t2 = 0;
         for _ in 0..l1 {
             t3 = t1;
             let mut t4 = t2;
             for _ in 0..ido {
                 let fresh11 = t3;
-                t3 = t3 + 1;
+                t3 += 1;
                 let fresh12 = t4;
-                t4 = t4 + 1;
+                t4 += 1;
                 cc[fresh12 as usize] = ch[fresh11 as usize];
             }
             t1 += ido;
@@ -530,9 +528,9 @@ pub(crate) fn dradfg(
         }
     }
 
-    t1 = 0 as i32;
-    t2 = ido << 1 as i32;
-    t3 = 0 as i32;
+    t1 = 0;
+    t2 = ido << 1;
+    t3 = 0;
     let mut t4 = ipp2 * t0;
     for _ in 1..ipph {
         t1 += t2;

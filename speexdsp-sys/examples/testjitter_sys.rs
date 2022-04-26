@@ -8,7 +8,7 @@ use std::ptr;
 macro_rules! null_struct {
     ($v:ident) => {
         let mut $v = JitterBufferPacket {
-            data: 0 as *mut i8,
+            data: std::ptr::null_mut::<i8>(),
             len: 0,
             timestamp: 0,
             span: 0,

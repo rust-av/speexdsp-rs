@@ -224,6 +224,6 @@ mod tests {
             super::hsum_m128d(v)
         };
 
-        assert_eq!(result as usize, 3 as usize);
+        assert_eq!(result as usize, 3_usize);
     }
 }

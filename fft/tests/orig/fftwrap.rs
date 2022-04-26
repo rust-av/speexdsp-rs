@@ -16,9 +16,9 @@ use std::{
 use super::smallft::*;
 
 extern "C" {
-    #[no_mangle]
+
     fn calloc(_: c_ulong, _: c_ulong) -> *mut c_void;
-    #[no_mangle]
+
     fn free(__ptr: *mut c_void);
 }
 /* Copyright (C) 2007 Jean-Marc Valin
@@ -60,7 +60,7 @@ pub unsafe fn speex_alloc(mut size: c_int) -> *mut c_void {
     /* WARNING: this is not equivalent to malloc(). If you want to use malloc()
     or your own allocator, YOU NEED TO CLEAR THE MEMORY ALLOCATED. Otherwise
     you will experience strange bugs */
-    return calloc(size as c_ulong, 1 as c_int as c_ulong);
+    calloc(size as c_ulong, 1_i32 as c_ulong)
 }
 /* * Speex wrapper for calloc. To do your own dynamic allocation, all you need to do is replace this function, speex_realloc and speex_alloc */
 #[inline]
@@ -102,12 +102,12 @@ pub unsafe fn speex_free(mut ptr: *mut c_void) {
 */
 
 pub unsafe fn spx_fft_init(mut size: c_int) -> *mut c_void {
-    let mut table: *mut drft_lookup = 0 as *mut drft_lookup;
+    let mut table: *mut drft_lookup = std::ptr::null_mut::<drft_lookup>();
     table =
         speex_alloc(::std::mem::size_of::<drft_lookup>() as c_ulong as c_int)
             as *mut drft_lookup;
     spx_drft_init(table, size);
-    return table as *mut c_void;
+    table as *mut c_void
 }
 
 pub unsafe fn spx_fft_destroy(mut table: *mut c_void) {
@@ -125,7 +125,7 @@ pub unsafe fn spx_fft(
         let mut scale: c_float =
             (1.0f64 / (*(table as *mut drft_lookup)).n as c_double) as c_float;
         eprintln!("FFT should not be done in-place");
-        i = 0 as c_int;
+        i = 0_i32;
         while i < (*(table as *mut drft_lookup)).n {
             *out.offset(i as isize) = scale * *in_0.offset(i as isize);
             i += 1
@@ -134,7 +134,7 @@ pub unsafe fn spx_fft(
         let mut i_0: c_int = 0;
         let mut scale_0: c_float =
             (1.0f64 / (*(table as *mut drft_lookup)).n as c_double) as c_float;
-        i_0 = 0 as c_int;
+        i_0 = 0_i32;
         while i_0 < (*(table as *mut drft_lookup)).n {
             *out.offset(i_0 as isize) = scale_0 * *in_0.offset(i_0 as isize);
             i_0 += 1
@@ -152,7 +152,7 @@ pub unsafe fn spx_ifft(
         eprintln!("FFT should not be done in-place");
     } else {
         let mut i: c_int = 0;
-        i = 0 as c_int;
+        i = 0_i32;
         while i < (*(table as *mut drft_lookup)).n {
             *out.offset(i as isize) = *in_0.offset(i as isize);
             i += 1

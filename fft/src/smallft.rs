@@ -25,14 +25,12 @@ fn drfti1_c_10244(ifac: &mut [i32], n: i32, nf: &mut i32) {
             *nf += 1;
             ifac[*nf as usize + 1] = ntry;
             nl = nq;
-            if ntry == 2 {
-                if *nf != 1 {
-                    for i in 1..*nf {
-                        let ib = *nf - i + 1 as i32;
-                        ifac[ib as usize + 1] = ifac[ib as usize];
-                    }
-                    ifac[2] = 2;
+            if ntry == 2 && *nf != 1 {
+                for i in 1..*nf {
+                    let ib = *nf - i + 1;
+                    ifac[ib as usize + 1] = ifac[ib as usize];
                 }
+                ifac[2] = 2;
             }
             if nl == 1 {
                 break 'c_10244;
@@ -42,8 +40,6 @@ fn drfti1_c_10244(ifac: &mut [i32], n: i32, nf: &mut i32) {
 }
 
 pub(crate) fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
-    const TPI: f32 = 6.283_185_307_179_586_48;
-
     let n = wa.len() as i32;
     let mut nf = 0;
 
@@ -52,7 +48,7 @@ pub(crate) fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
     ifac[0] = n;
     ifac[1] = nf;
     let nfm1 = nf - 1;
-    let argh = TPI / n as f32;
+    let argh = std::f32::consts::TAU / n as f32;
     let mut is = 0;
     let mut l1 = 1;
 
@@ -77,12 +73,12 @@ pub(crate) fn drfti1(wa: &mut [f32], ifac: &mut [i32]) {
                 fi += 1.0f32;
                 let arg = fi * argld;
                 let fresh0 = i;
-                i = i + 1;
+                i += 1;
                 wa[fresh0] = f64::cos(arg as f64) as f32;
                 let fresh1 = i;
-                i = i + 1;
+                i += 1;
                 wa[fresh1] = f64::sin(arg as f64) as f32;
-                ii += 2 as i32
+                ii += 2i32
             }
             is += ido as usize;
             j += 1
@@ -217,17 +213,17 @@ fn drftb1_l102(
         } else {
             let ix2 = iw + ido - 1;
             if *na != 0 {
-                dradb3(ido, l1, &ch, c, &wa[iw_temp..], &wa[ix2 as usize..]);
+                dradb3(ido, l1, ch, c, &wa[iw_temp..], &wa[ix2 as usize..]);
             } else {
-                dradb3(ido, l1, &c, ch, &wa[iw_temp..], &wa[ix2 as usize..]);
+                dradb3(ido, l1, c, ch, &wa[iw_temp..], &wa[ix2 as usize..]);
             }
             *na = 1 - *na;
         }
     } else {
         if *na != 0 {
-            dradb2(ido, l1, &ch, c, &wa[iw_temp..]);
+            dradb2(ido, l1, ch, c, &wa[iw_temp..]);
         } else {
-            dradb2(ido, l1, &c, ch, &wa[iw_temp..]);
+            dradb2(ido, l1, c, ch, &wa[iw_temp..]);
         }
         *na = 1 - *na;
     }
@@ -260,7 +256,7 @@ pub(crate) fn drftb1(
                 dradb4(
                     ido,
                     l1,
-                    &ch,
+                    ch,
                     c,
                     &wa[(iw as usize - 1)..],
                     &wa[(ix2 as usize - 1)..],
@@ -270,7 +266,7 @@ pub(crate) fn drftb1(
                 dradb4(
                     ido,
                     l1,
-                    &c,
+                    c,
                     ch,
                     &wa[(iw as usize - 1)..],
                     &wa[(ix2 as usize - 1)..],

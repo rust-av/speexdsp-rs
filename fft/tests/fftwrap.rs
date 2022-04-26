@@ -84,9 +84,9 @@ macro_rules! test_fftwrap {
     ($func: ident) => {
         let mut output = [0.; 64];
         let mut drft_lookup = DrftLookup::new(INPUT.len());
-        let mut input = INPUT.clone();
+        let input = INPUT.clone();
 
-        drft_lookup.$func(&mut input, &mut output);
+        drft_lookup.$func(&input, &mut output);
 
         let mut expected_output = [0.; 64];
         unsafe {

@@ -156,6 +156,6 @@ mod tests {
             super::hsum_m256d(v)
         };
 
-        assert_eq!(result as usize, 10 as usize);
+        assert_eq!(result as usize, 10_usize);
     }
 }
