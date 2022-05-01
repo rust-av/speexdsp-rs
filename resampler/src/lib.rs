@@ -2,6 +2,8 @@
 
 mod speex;
 
+use std::fmt;
+
 pub struct State {
     st: speex::SpeexResamplerState,
 }
@@ -10,6 +12,15 @@ pub struct State {
 pub enum Error {
     AllocFailed,
     InvalidArg,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::AllocFailed => f.write_str("memory allocation failed"),
+            Error::InvalidArg => f.write_str("invalid argument"),
+        }
+    }
 }
 
 pub trait Sample: Copy + Clone {
