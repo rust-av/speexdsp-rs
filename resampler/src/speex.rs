@@ -237,9 +237,6 @@ impl SpeexResamplerState {
         mut out: &mut [f32],
         out_len: &mut u32,
     ) -> usize {
-        if in_0.is_empty() {
-            panic!("Empty input slice is not allowed");
-        }
         let mut ilen = *in_len;
         let mut olen = *out_len;
         let channel_idx = channel_index as usize;
@@ -303,9 +300,6 @@ impl SpeexResamplerState {
         mut out: &mut [i16],
         out_len: &mut u32,
     ) -> usize {
-        if in_0.is_empty() {
-            panic!("Empty input slice is not allowed");
-        }
         let istride_save = self.in_stride;
         let ostride_save = self.out_stride;
         let mut ilen = *in_len;
@@ -395,9 +389,6 @@ impl SpeexResamplerState {
         out: &mut [f32],
         out_len: &mut u32,
     ) -> usize {
-        if in_0.is_empty() {
-            panic!("Empty input slice is not allowed");
-        }
         let istride_save = self.in_stride;
         let ostride_save = self.out_stride;
         let bak_out_len = *out_len;
@@ -442,9 +433,6 @@ impl SpeexResamplerState {
         out: &mut [i16],
         out_len: &mut u32,
     ) -> usize {
-        if in_0.is_empty() {
-            panic!("Empty input slice is not allowed");
-        }
         let istride_save = self.in_stride;
         let ostride_save = self.out_stride;
         let bak_out_len = *out_len;
