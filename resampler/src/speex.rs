@@ -21,7 +21,7 @@ pub struct SpeexResamplerState {
     num_rate: u32,
     den_rate: u32,
     quality: u32,
-    nb_channels: u32,
+    pub(crate) nb_channels: u32,
     filt_len: u32,
     mem_alloc_size: u32,
     buffer_size: u32,

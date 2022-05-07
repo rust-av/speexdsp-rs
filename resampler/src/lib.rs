@@ -67,8 +67,8 @@ impl Sample for i16 {
         input: &[i16],
         output: &mut [i16],
     ) -> Result<(usize, usize), Error> {
-        let mut in_len = input.len() as u32;
-        let mut out_len = output.len() as u32;
+        let mut in_len = input.len() as u32 / st.nb_channels;
+        let mut out_len = output.len() as u32 / st.nb_channels;
         let ret = st.process_interleaved_int(
             input,
             &mut in_len,
@@ -113,8 +113,8 @@ impl Sample for f32 {
         input: &[f32],
         output: &mut [f32],
     ) -> Result<(usize, usize), Error> {
-        let mut in_len = input.len() as u32;
-        let mut out_len = output.len() as u32;
+        let mut in_len = input.len() as u32 / st.nb_channels;
+        let mut out_len = output.len() as u32 / st.nb_channels;
         let ret = st.process_interleaved_float(
             input,
             &mut in_len,
