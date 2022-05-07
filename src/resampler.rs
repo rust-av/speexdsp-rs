@@ -44,6 +44,11 @@ pub trait Resampler: Sized {
         input: &[f32],
         output: &mut [f32],
     ) -> Result<(usize, usize), Error>;
+    fn process_interleaved_float(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+    ) -> Result<(usize, usize), Error>;
     fn skip_zeros(&mut self);
     fn reset(&mut self);
     fn get_input_latency(&self) -> usize;
@@ -71,6 +76,7 @@ mod sys {
 
     pub struct State {
         st: *mut SpeexResamplerState,
+        channels: usize,
     }
 
     impl Resampler for State {
@@ -94,7 +100,7 @@ mod sys {
             if st.is_null() {
                 Err(err.into())
             } else {
-                Ok(State { st })
+                Ok(State { st, channels })
             }
         }
 
@@ -135,6 +141,33 @@ mod sys {
             unsafe { speex_resampler_get_ratio(self.st, &mut num, &mut den) };
 
             (num as usize, den as usize)
+        }
+
+        fn process_interleaved_float(
+            &mut self,
+            input: &[f32],
+            output: &mut [f32],
+        ) -> Result<(usize, usize), Error> {
+            let mut in_len = input.len() as u32 / self.channels as u32;
+            let mut out_len = output.len() as u32 / self.channels as u32;
+            let ret = unsafe {
+                speex_resampler_process_interleaved_float(
+                    self.st,
+                    input.as_ptr(),
+                    &mut in_len,
+                    output.as_mut_ptr(),
+                    &mut out_len,
+                )
+            };
+
+            if ret != 0 {
+                Err(ret.into())
+            } else {
+                Ok((
+                    in_len as usize * self.channels,
+                    out_len as usize * self.channels,
+                ))
+            }
         }
 
         fn process_float(
@@ -239,6 +272,14 @@ pub mod native {
         }
         fn get_ratio(&self) -> (usize, usize) {
             State::get_ratio(self)
+        }
+        fn process_interleaved_float(
+            &mut self,
+            input: &[f32],
+            output: &mut [f32],
+        ) -> Result<(usize, usize), Error> {
+            State::process_interleaved(self, input, output)
+                .map_err(|e| e.into())
         }
         fn process_float(
             &mut self,

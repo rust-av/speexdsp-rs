@@ -79,7 +79,10 @@ impl Sample for i16 {
         if ret != 0 {
             Err(Error::AllocFailed)
         } else {
-            Ok((in_len as usize, out_len as usize))
+            Ok((
+                (in_len * st.nb_channels) as usize,
+                (out_len * st.nb_channels) as usize,
+            ))
         }
     }
 }
@@ -104,7 +107,10 @@ impl Sample for f32 {
         if ret != 0 {
             Err(Error::AllocFailed)
         } else {
-            Ok((in_len as usize, out_len as usize))
+            Ok((
+                (in_len * st.nb_channels) as usize,
+                (out_len * st.nb_channels) as usize,
+            ))
         }
     }
 

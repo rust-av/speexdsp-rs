@@ -268,6 +268,9 @@ impl SpeexResamplerState {
                 );
                 ilen -= ichunk;
                 olen -= ochunk;
+                if ilen == 0 || olen == 0 {
+                    break;
+                }
                 out = &mut out[(ochunk * self.out_stride) as usize..][..];
                 in_0 = &in_0[(ichunk * self.in_stride) as usize..][..];
             }

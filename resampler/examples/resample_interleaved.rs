@@ -9,14 +9,19 @@ const RATE: usize = 48000;
 fn main() {
     let mut rate = 1000;
     let mut off = 0;
-    let mut avail = INBLOCK as isize;
+    let channels = 2;
+    let mut avail = (INBLOCK * channels) as isize;
 
     let fin: Vec<f32> = (0..INBLOCK * 4)
-        .map(|i| ((i as f32) / PERIOD * 2.0 * PI).sin() * 0.9)
+        .map(|i| {
+            let v = ((i as f32) / PERIOD * 2.0 * PI).sin() * 0.9;
+            std::iter::repeat(v).take(channels)
+        })
+        .flatten()
         .collect();
-    let mut fout = vec![0f32; INBLOCK * 8];
+    let mut fout = vec![0f32; INBLOCK * 8 * channels];
 
-    let mut st = State::new(1, RATE, RATE, 4).unwrap();
+    let mut st = State::new(2, RATE, RATE, 4).unwrap();
 
     st.set_rate(RATE, rate).unwrap();
     st.skip_zeros();
@@ -26,6 +31,7 @@ fn main() {
     eprintln!("Quality: {}", st.get_quality());
 
     let mut data = Vec::new();
+    let full_inblock = INBLOCK * channels;
 
     loop {
         let in_len = avail as usize;
@@ -44,10 +50,10 @@ fn main() {
         );
 
         off += in_len as usize;
-        avail += INBLOCK as isize - in_len as isize;
+        avail += full_inblock as isize - in_len as isize;
 
-        if off >= INBLOCK {
-            off -= INBLOCK;
+        if off >= full_inblock {
+            off -= full_inblock;
         }
 
         data.push(fout[..out_len as usize].to_vec());
@@ -60,5 +66,5 @@ fn main() {
         st.set_rate(RATE, rate).unwrap();
     }
 
-    println!("{:#?}", data);
+    println!("{:#.5?}", data);
 }
