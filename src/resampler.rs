@@ -76,6 +76,7 @@ mod sys {
 
     pub struct State {
         st: *mut SpeexResamplerState,
+        channels: u32,
     }
 
     impl Resampler for State {
@@ -99,7 +100,7 @@ mod sys {
             if st.is_null() {
                 Err(err.into())
             } else {
-                Ok(State { st })
+                Ok(State { st, channels })
             }
         }
 
@@ -147,8 +148,8 @@ mod sys {
             input: &[f32],
             output: &mut [f32],
         ) -> Result<(usize, usize), Error> {
-            let mut in_len = input.len() as u32;
-            let mut out_len = output.len() as u32;
+            let mut in_len = input.len() as u32 / self.channels as u32;
+            let mut out_len = output.len() as u32 / self.channels as u32;
             let ret = unsafe {
                 speex_resampler_process_interleaved_float(
                     self.st,
@@ -162,7 +163,10 @@ mod sys {
             if ret != 0 {
                 Err(ret.into())
             } else {
-                Ok((in_len as usize, out_len as usize))
+                Ok((
+                    in_len as usize * self.channels,
+                    out_len as usize * self.channels,
+                ))
             }
         }
 
