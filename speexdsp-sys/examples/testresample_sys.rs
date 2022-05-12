@@ -51,7 +51,9 @@ fn main() {
             off -= INBLOCK;
         }
 
-        println!("{:#?}", &fout[..out_len as usize]);
+        for v in &fout[..out_len as usize] {
+            println!("{:.05}", v);
+        }
 
         rate += 100;
         if rate > 128000 {
