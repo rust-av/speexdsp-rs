@@ -1,7 +1,3 @@
-extern crate byteorder;
-extern crate speexdsp_sys;
-extern crate structopt;
-
 use byteorder::{BigEndian, ByteOrder};
 use speexdsp_sys::echo::*;
 use speexdsp_sys::preprocess::*;

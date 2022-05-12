@@ -1,5 +1,3 @@
-extern crate speexdsp_sys;
-
 use speexdsp_sys::resampler::*;
 use std::f32::consts::PI;
 use std::ptr;

@@ -9,6 +9,7 @@ readme = "../README.md"
 homepage = "https://github.com/rust-av/speexdsp-rs"
 keywords = ["audio", "resampler"]
 categories = ["api-bindings"]
+edition = "2021"
 
 [build-dependencies]
 autotools = "0.2"

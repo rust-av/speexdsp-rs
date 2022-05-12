@@ -1,6 +1,3 @@
-extern crate byteorder;
-extern crate speexdsp_sys;
-
 use byteorder::{BigEndian, ByteOrder};
 use speexdsp_sys::preprocess::*;
 use std::ffi::c_void;
