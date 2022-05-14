@@ -34,6 +34,8 @@ fn main() {
         let prev_in_len = in_len;
         let prev_out_len = out_len;
 
+        eprintln!("in_len {}, out_len {}", in_len, out_len);
+
         unsafe {
             speex_resampler_process_interleaved_float(
                 st,

@@ -92,46 +92,6 @@ pub type ResamplerBasicFunc = Option<
     ) -> i32,
 >;
 
-macro_rules! chunk_assign {
-    ($ch_mut:ident, $lbound_mut:expr, $ubound_mut:expr, $val:expr) => {
-        $ch_mut[$lbound_mut as usize..$ubound_mut as usize]
-            .iter_mut()
-            .for_each(|x| *x = $val);
-    };
-}
-
-macro_rules! chunk_copy {
-    ($ch_mut:ident, $lbound_mut:expr, $ubound_mut:expr,
-     $ch:ident, $lbound:expr, $ubound:expr) => {
-        $ch_mut[$lbound_mut as usize..$ubound_mut as usize]
-            .iter_mut()
-            .zip($ch[$lbound as usize..$ubound as usize].iter())
-            .for_each(|(x, y)| *x = *y);
-    };
-}
-
-macro_rules! algo {
-    ($self:ident, $ch_mut:ident, $ch:ident,
-     $old_length:ident, $magic:expr) => {
-        let olen = $old_length + 2 * $magic;
-        let filt_len = $self.filt_len - 1;
-        if $self.filt_len > olen {
-            let new_filt_len = $self.filt_len - olen;
-            for new_last_sample in &mut $self.last_sample {
-                chunk_copy!($ch_mut, new_filt_len, filt_len, $ch, 0, olen - 1);
-                chunk_assign!($ch_mut, 0, new_filt_len, 0.0);
-                $magic = 0;
-                *new_last_sample += new_filt_len / 2;
-            }
-        } else {
-            $magic = (olen - $self.filt_len) / 2;
-            let ubound_mut = filt_len + $magic;
-            let ubound = ubound_mut + $magic;
-            chunk_copy!($ch_mut, 0, ubound_mut, $ch, $magic, ubound);
-        }
-    };
-}
-
 impl SpeexResamplerState {
     /* * Create a new resampler with integer input and output rates.
      * @param nb_channels number of channels to be processed
@@ -704,36 +664,6 @@ impl SpeexResamplerState {
         }
     }
 
-    #[inline(always)]
-    fn chunks_iterator(
-        &mut self,
-        old_length: u32,
-        alloc_size: usize,
-        algo: usize,
-    ) {
-        let mem_copy = self.mem.clone();
-
-        let mut_mem = self.mem.chunks_mut(self.mem_alloc_size as usize);
-        let mem = mem_copy.chunks(alloc_size);
-
-        for (ch_mut, ch) in mut_mem.zip(mem) {
-            for magic in &mut self.magic_samples {
-                if algo == 0 {
-                    let range = old_length - 1 + *magic;
-                    chunk_copy!(ch_mut, *magic, range, ch, 0, range);
-                    chunk_assign!(ch_mut, 0, *magic, 0.0);
-                } else if algo == 1 {
-                    algo!(self, ch_mut, ch, old_length, *magic);
-                } else {
-                    let skip = (old_length - self.filt_len) / 2;
-                    let ubound = self.filt_len - 1 + skip + *magic;
-                    chunk_copy!(ch_mut, 0, ubound, ch, skip, ubound + skip);
-                    *magic += skip;
-                }
-            }
-        }
-    }
-
     fn update_filter(&mut self) -> usize {
         let old_length = self.filt_len;
         let quality = self.quality as usize;
@@ -750,10 +680,12 @@ impl SpeexResamplerState {
 
         let use_direct = self.filt_len * self.den_rate
             <= self.filt_len * self.oversample + 8
-            && 2147483647u64
-                / ::std::mem::size_of::<f32>() as u64
+            && i32::MAX as u64
+                / std::mem::size_of::<i16>() as u64
                 / self.den_rate as u64
                 >= self.filt_len as u64;
+
+        // TODO: more checks?
 
         let min_sinc_table_length = if !use_direct {
             self.filt_len * self.oversample + 8
@@ -772,11 +704,14 @@ impl SpeexResamplerState {
             self.not_use_direct();
         }
 
+        /* Here's the place where we update the filter memory to take into account
+        the change in filter length. It's probably the messiest part of the code
+        due to handling of lots of corner cases. */
+
         let min_alloc_size = self.filt_len - 1 + self.buffer_size;
         if min_alloc_size > self.mem_alloc_size {
-            let mem = self.mem.clone();
-            self.mem = vec![0.0; (self.nb_channels * min_alloc_size) as usize];
-            self.mem[0..mem.len()].copy_from_slice(&mem);
+            self.mem
+                .resize((self.nb_channels * min_alloc_size) as usize, 0.0);
             self.mem_alloc_size = min_alloc_size;
         }
 
@@ -784,10 +719,64 @@ impl SpeexResamplerState {
             let dim = (self.nb_channels * self.mem_alloc_size) as usize;
             self.mem = vec![0.0; dim];
         } else if self.filt_len > old_length {
-            self.chunks_iterator(old_length, old_alloc_size, 0);
-            self.chunks_iterator(old_length, self.mem_alloc_size as usize, 1);
+            /* Increase the filter length */
+            for i in (0..self.nb_channels as usize).rev() {
+                // let mut olen = old_length as usize;
+                /* Try and remove the magic samples as if nothing had happened */
+                let off = self.magic_samples[i] as usize;
+                let olen = old_length as usize + 2 * off;
+                let start = i * self.mem_alloc_size as usize;
+                let old_start = i * old_alloc_size;
+                let end = old_length as usize - 1 + off;
+
+                for j in (0..end).rev() {
+                    self.mem[start + off + j] = self.mem[old_start + j];
+                }
+                for j in 0..off {
+                    self.mem[start + j] = 0.0;
+                }
+
+                self.magic_samples[i] = 0;
+
+                /* If the new filter length is still bigger than the "augmented" length */
+                if self.filt_len > olen as u32 {
+                    /* Copy data going backward */
+                    for j in 0..olen - 1 {
+                        self.mem[start + self.filt_len as usize - 2 - j] =
+                            self.mem[start + olen - 2 - j];
+                    }
+                    /* Then put zeros for lack of anything better */
+                    for j in olen - 1..self.filt_len as usize - 1 {
+                        self.mem[start + j] = self.mem[start + off - j];
+                    }
+                    /* Adjust last_sample */
+                    self.last_sample[i] += (self.filt_len - olen as u32) / 2;
+                } else {
+                    /* Put back some of the magic! */
+                    let off = (olen - self.filt_len as usize) / 2;
+                    self.magic_samples[i] = off as u32;
+
+                    for j in 0..self.filt_len as usize - 1 + off {
+                        self.mem[start + j] = self.mem[start + off + j];
+                    }
+                }
+            }
         } else if self.filt_len < old_length {
-            self.chunks_iterator(old_length, self.mem_alloc_size as usize, 2);
+            /* Reduce filter length, this a bit tricky. We need to store some of the memory as "magic"
+            samples so they can be used directly as input the next time(s) */
+            for i in 0..self.nb_channels as usize {
+                let old_magic = self.magic_samples[i] as usize;
+                let off = ((old_length - self.filt_len) / 2) as usize;
+                let start = i * self.mem_alloc_size as usize;
+                let end = self.filt_len as usize - 1 + off + old_magic;
+
+                /* Copy data going forward */
+                for j in 0..end {
+                    self.mem[start + j] = self.mem[start + off + j];
+                }
+
+                self.magic_samples[i] = (off + old_magic) as u32;
+            }
         }
         RESAMPLER_ERR_SUCCESS
     }

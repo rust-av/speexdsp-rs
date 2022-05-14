@@ -148,8 +148,9 @@ mod sys {
             input: &[f32],
             output: &mut [f32],
         ) -> Result<(usize, usize), Error> {
-            let mut in_len = input.len() as u32 / self.channels as u32;
-            let mut out_len = output.len() as u32 / self.channels as u32;
+            let mut in_len = (input.len() / self.channels) as u32;
+            let mut out_len = (output.len() / self.channels) as u32;
+            eprintln!("in_len {}, out_len {}", in_len, out_len);
             let ret = unsafe {
                 speex_resampler_process_interleaved_float(
                     self.st,
@@ -159,6 +160,7 @@ mod sys {
                     &mut out_len,
                 )
             };
+            eprintln!("result in_len {}, out_len {}", in_len, out_len);
 
             if ret != 0 {
                 Err(ret.into())
