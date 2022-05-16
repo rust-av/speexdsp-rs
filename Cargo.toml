@@ -13,9 +13,9 @@ edition = "2018"
 
 [features]
 sys = ["speexdsp-sys"]
-sse3 = [ "speexdsp-resampler/sse3" ]
-avx = [ "speexdsp-resampler/avx" ]
-dynnative = [ "speexdsp-resampler/dynnative" ]
+# sse3 = [ "speexdsp-resampler/sse3" ]
+# avx = [ "speexdsp-resampler/avx" ]
+# dynnative = [ "speexdsp-resampler/dynnative" ]
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
@@ -26,6 +26,7 @@ criterion = "0.3"
 
 [dependencies]
 speexdsp-sys = { version = "0.1.1", path = "speexdsp-sys", optional = true }
+libc = "0.2"
 speexdsp-resampler = { version = "0.2", path = "resampler" }
 
 [workspace]
