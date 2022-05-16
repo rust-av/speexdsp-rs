@@ -57,9 +57,11 @@ pub trait Resampler: Sized {
     fn get_quality(&self) -> usize;
 }
 
-#[cfg(feature = "sys")]
 mod sys {
     use super::{Error, Resampler};
+    #[cfg(not(feature = "sys"))]
+    use crate::speex_resample::*;
+    #[cfg(feature = "sys")]
     use speexdsp_sys::resampler::*;
 
     impl From<i32> for Error {
@@ -312,8 +314,8 @@ pub mod native {
     }
 }
 
-#[cfg(feature = "sys")]
+// #[cfg(feature = "sys")]
 pub use self::sys::*;
 
-#[cfg(not(feature = "sys"))]
-pub use self::native::*;
+// #[cfg(not(feature = "sys"))]
+// pub use self::native::*;
