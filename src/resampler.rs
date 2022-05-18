@@ -49,6 +49,11 @@ pub trait Resampler: Sized {
         input: &[f32],
         output: &mut [f32],
     ) -> Result<(usize, usize), Error>;
+    fn process_interleaved_int(
+        &mut self,
+        input: &[i16],
+        output: &mut [i16],
+    ) -> Result<(usize, usize), Error>;
     fn skip_zeros(&mut self);
     fn reset(&mut self);
     fn get_input_latency(&self) -> usize;
@@ -155,6 +160,35 @@ mod sys {
             eprintln!("in_len {}, out_len {}", in_len, out_len);
             let ret = unsafe {
                 speex_resampler_process_interleaved_float(
+                    self.st,
+                    input.as_ptr(),
+                    &mut in_len,
+                    output.as_mut_ptr(),
+                    &mut out_len,
+                )
+            };
+            eprintln!("result in_len {}, out_len {}", in_len, out_len);
+
+            if ret != 0 {
+                Err(ret.into())
+            } else {
+                Ok((
+                    in_len as usize * self.channels,
+                    out_len as usize * self.channels,
+                ))
+            }
+        }
+
+        fn process_interleaved_int(
+            &mut self,
+            input: &[i16],
+            output: &mut [i16],
+        ) -> Result<(usize, usize), Error> {
+            let mut in_len = (input.len() / self.channels) as u32;
+            let mut out_len = (output.len() / self.channels) as u32;
+            eprintln!("in_len {}, out_len {}", in_len, out_len);
+            let ret = unsafe {
+                speex_resampler_process_interleaved_int(
                     self.st,
                     input.as_ptr(),
                     &mut in_len,
@@ -281,6 +315,14 @@ pub mod native {
             &mut self,
             input: &[f32],
             output: &mut [f32],
+        ) -> Result<(usize, usize), Error> {
+            State::process_interleaved(self, input, output)
+                .map_err(|e| e.into())
+        }
+        fn process_interleaved_int(
+            &mut self,
+            input: &[i16],
+            output: &mut [i16],
         ) -> Result<(usize, usize), Error> {
             State::process_interleaved(self, input, output)
                 .map_err(|e| e.into())

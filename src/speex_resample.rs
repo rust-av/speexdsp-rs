@@ -205,8 +205,6 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
     mut quality: libc::c_int,
     mut err: *mut libc::c_int,
 ) -> *mut SpeexResamplerState {
-    let mut st: *mut SpeexResamplerState = 0 as *mut SpeexResamplerState;
-    let mut filter_err: libc::c_int = 0;
     if nb_channels == 0i32 as libc::c_uint
         || ratio_num == 0i32 as libc::c_uint
         || ratio_den == 0i32 as libc::c_uint
@@ -218,7 +216,7 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
         }
         return 0 as *mut SpeexResamplerState;
     } else {
-        st = speex_alloc(::std::mem::size_of::<SpeexResamplerState>()
+        let mut st = speex_alloc(::std::mem::size_of::<SpeexResamplerState>()
             as libc::c_ulong as libc::c_int)
             as *mut SpeexResamplerState;
         if st.is_null() {
@@ -268,7 +266,7 @@ pub unsafe extern "C" fn speex_resampler_init_frac(
                         speex_resampler_set_rate_frac(
                             st, ratio_num, ratio_den, in_rate, out_rate,
                         );
-                        filter_err = update_filter(st);
+                        let filter_err = update_filter(st);
                         if filter_err == RESAMPLER_ERR_SUCCESS as libc::c_int {
                             (*st).initialised = 1i32
                         } else {
@@ -1190,7 +1188,7 @@ static mut _KAISER12: FuncDef = unsafe {
         oversample: 64i32,
     }
 };
-static mut kaiser12_table: [libc::c_double; 68] = unsafe {
+static mut kaiser12_table: [libc::c_double; 68] = {
     [
         0.99859849f64,
         1.0f64,
@@ -1268,7 +1266,7 @@ static mut _KAISER10: FuncDef = unsafe {
         oversample: 32i32,
     }
 };
-static mut kaiser10_table: [libc::c_double; 36] = unsafe {
+static mut kaiser10_table: [libc::c_double; 36] = {
     [
         0.99537781f64,
         1.0f64,
@@ -1314,7 +1312,7 @@ static mut _KAISER8: FuncDef = unsafe {
         oversample: 32i32,
     }
 };
-static mut kaiser8_table: [libc::c_double; 36] = unsafe {
+static mut kaiser8_table: [libc::c_double; 36] = {
     [
         0.99635258f64,
         1.0f64,
@@ -1360,7 +1358,7 @@ static mut _KAISER6: FuncDef = unsafe {
         oversample: 32i32,
     }
 };
-static mut kaiser6_table: [libc::c_double; 36] = unsafe {
+static mut kaiser6_table: [libc::c_double; 36] = {
     [
         0.99733006f64,
         1.0f64,
@@ -2062,15 +2060,12 @@ pub unsafe extern "C" fn speex_resampler_process_interleaved_float(
     mut out_len: *mut spx_uint32_t,
 ) -> libc::c_int {
     let mut i: spx_uint32_t = 0;
-    let mut istride_save: libc::c_int = 0;
-    let mut ostride_save: libc::c_int = 0;
     let mut bak_out_len: spx_uint32_t = *out_len;
     let mut bak_in_len: spx_uint32_t = *in_len;
-    istride_save = (*st).in_stride;
-    ostride_save = (*st).out_stride;
+    let mut istride_save = (*st).in_stride;
+    let mut ostride_save = (*st).out_stride;
     (*st).out_stride = (*st).nb_channels as libc::c_int;
     (*st).in_stride = (*st).out_stride;
-    i = 0i32 as spx_uint32_t;
     while i < (*st).nb_channels {
         *out_len = bak_out_len;
         *in_len = bak_in_len;
@@ -2121,15 +2116,12 @@ pub unsafe extern "C" fn speex_resampler_process_interleaved_int(
     mut out_len: *mut spx_uint32_t,
 ) -> libc::c_int {
     let mut i: spx_uint32_t = 0;
-    let mut istride_save: libc::c_int = 0;
-    let mut ostride_save: libc::c_int = 0;
     let mut bak_out_len: spx_uint32_t = *out_len;
     let mut bak_in_len: spx_uint32_t = *in_len;
-    istride_save = (*st).in_stride;
-    ostride_save = (*st).out_stride;
+    let mut istride_save = (*st).in_stride;
+    let mut ostride_save = (*st).out_stride;
     (*st).out_stride = (*st).nb_channels as libc::c_int;
     (*st).in_stride = (*st).out_stride;
-    i = 0i32 as spx_uint32_t;
     while i < (*st).nb_channels {
         *out_len = bak_out_len;
         *in_len = bak_in_len;
@@ -2298,7 +2290,6 @@ pub unsafe extern "C" fn speex_resampler_skip_zeros(
     mut st: *mut SpeexResamplerState,
 ) -> libc::c_int {
     let mut i: spx_uint32_t = 0;
-    i = 0i32 as spx_uint32_t;
     while i < (*st).nb_channels {
         *(*st).last_sample.offset(i as isize) =
             (*st).filt_len.wrapping_div(2i32 as libc::c_uint) as spx_int32_t;
@@ -2314,7 +2305,6 @@ pub unsafe extern "C" fn speex_resampler_reset_mem(
     mut st: *mut SpeexResamplerState,
 ) -> libc::c_int {
     let mut i: spx_uint32_t = 0;
-    i = 0i32 as spx_uint32_t;
     while i < (*st).nb_channels {
         *(*st).last_sample.offset(i as isize) = 0i32;
         *(*st).magic_samples.offset(i as isize) = 0i32 as spx_uint32_t;
