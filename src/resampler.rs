@@ -357,3 +357,6 @@ pub use self::sys::*;
 
 // #[cfg(not(feature = "sys"))]
 // pub use self::native::*;
+
+#[cfg(test)]
+mod test;
