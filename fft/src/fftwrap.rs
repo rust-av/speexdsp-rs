@@ -62,7 +62,7 @@ impl DrftLookup {
 
         out.iter_mut()
             .zip(in_0.iter())
-            .take(self.n as usize)
+            .take(self.n)
             .for_each(|(o, i)| *o = scale * *i);
 
         self.spx_drft_forward(out);
@@ -72,7 +72,7 @@ impl DrftLookup {
         if in_0 == out {
             eprintln!("FFT should not be done in-place");
         } else {
-            out.copy_from_slice(&in_0[..self.n as usize]);
+            out.copy_from_slice(&in_0[..self.n]);
         }
 
         self.spx_drft_backward(out);
@@ -91,7 +91,7 @@ impl DrftLookup {
             return;
         }
 
-        let mut trigcache_temp = self.trigcache[self.n as usize..].to_vec();
+        let mut trigcache_temp = self.trigcache[self.n..].to_vec();
 
         drftf1(
             self.n as i32,
@@ -101,7 +101,7 @@ impl DrftLookup {
             &mut self.splitcache,
         );
 
-        self.trigcache[self.n as usize..].copy_from_slice(&trigcache_temp);
+        self.trigcache[self.n..].copy_from_slice(&trigcache_temp);
     }
 
     pub fn spx_drft_backward(&mut self, data: &mut [f32]) {
@@ -109,7 +109,7 @@ impl DrftLookup {
             return;
         }
 
-        let mut trigcache_temp = self.trigcache[self.n as usize..].to_vec();
+        let mut trigcache_temp = self.trigcache[self.n..].to_vec();
 
         drftb1(
             self.n as i32,
@@ -119,6 +119,6 @@ impl DrftLookup {
             &mut self.splitcache,
         );
 
-        self.trigcache[self.n as usize..].copy_from_slice(&trigcache_temp);
+        self.trigcache[self.n..].copy_from_slice(&trigcache_temp);
     }
 }

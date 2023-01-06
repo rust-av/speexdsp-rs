@@ -78,15 +78,15 @@ mod comparison {
             assert_eq!(in_len, in_len_native);
             assert_eq!(out_len, out_len_native);
 
-            off += in_len as usize;
+            off += in_len;
             avail += INBLOCK as isize - in_len as isize;
 
             if off >= INBLOCK {
                 off -= INBLOCK;
             }
 
-            let fout_s = &fout[..out_len as usize];
-            let fout_native_s = &fout_native[..out_len as usize];
+            let fout_s = &fout[..out_len];
+            let fout_native_s = &fout_native[..out_len];
 
             fout_s
                 .iter()
