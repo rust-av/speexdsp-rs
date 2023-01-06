@@ -204,9 +204,9 @@ impl SpeexResamplerState {
             out_stride: 1,
             buffer_size: 160,
             oversample: 0,
-            last_sample: vec![0; nb_channels as usize],
-            magic_samples: vec![0; nb_channels as usize],
-            samp_frac_num: vec![0; nb_channels as usize],
+            last_sample: vec![0; nb_channels],
+            magic_samples: vec![0; nb_channels],
+            samp_frac_num: vec![0; nb_channels],
         };
         st.set_quality(quality);
         st.set_rate_frac(ratio_num, ratio_den, in_rate, out_rate);
@@ -325,7 +325,7 @@ impl SpeexResamplerState {
                     channel_index,
                     &mut yselfack.as_mut_slice(),
                     ochunk,
-                ) as u32;
+                );
                 ochunk -= omagic;
                 olen -= omagic
             }
@@ -365,8 +365,8 @@ impl SpeexResamplerState {
 
             ilen -= ichunk;
             olen -= ochunk;
-            out = &mut out[(ochunk + omagic * ostride_save as u32) as usize..];
-            in_0 = &in_0[(ichunk * istride_save as u32) as usize..];
+            out = &mut out[(ochunk + omagic * ostride_save) as usize..];
+            in_0 = &in_0[(ichunk * istride_save) as usize..];
         }
         self.out_stride = ostride_save;
         *in_len -= ilen;
@@ -821,9 +821,9 @@ fn resampler_basic_zero(
         out[(out_stride * out_sample) as usize] = 0.0;
         out_sample += 1;
         last_sample += int_advance;
-        samp_frac_num += frac_advance as u32;
+        samp_frac_num += frac_advance;
         if samp_frac_num >= den_rate {
-            samp_frac_num -= den_rate as u32;
+            samp_frac_num -= den_rate;
             last_sample += 1
         }
     }
@@ -884,7 +884,7 @@ fn resampler_basic_interpolate_single(
 
         out_sample += 1;
         last_sample += int_advance;
-        samp_frac_num += frac_advance as u32;
+        samp_frac_num += frac_advance;
         if samp_frac_num >= den_rate {
             samp_frac_num -= den_rate;
             last_sample += 1;
@@ -1146,9 +1146,9 @@ fn resampler_basic_direct_single(
 
         out_sample += 1;
         last_sample += int_advance;
-        samp_frac_num += frac_advance as u32;
+        samp_frac_num += frac_advance;
         if samp_frac_num >= den_rate {
-            samp_frac_num -= den_rate as u32;
+            samp_frac_num -= den_rate;
             last_sample += 1
         }
     }
@@ -1189,13 +1189,13 @@ fn resampler_basic_direct_double(
 
         out_sample += 1;
         last_sample += int_advance;
-        samp_frac_num += frac_advance as u32;
+        samp_frac_num += frac_advance;
         if samp_frac_num >= den_rate {
-            samp_frac_num -= den_rate as u32;
+            samp_frac_num -= den_rate;
             last_sample += 1;
         }
     }
-    st.last_sample[channel_index as usize] = last_sample as u32;
+    st.last_sample[channel_index as usize] = last_sample;
     st.samp_frac_num[channel_index as usize] = samp_frac_num;
     out_sample as i32
 }
@@ -1243,7 +1243,7 @@ fn speex_resampler_process_native(
         out_len,
     );
     if st.last_sample[channel_index as usize] < *in_len {
-        *in_len = st.last_sample[channel_index as usize] as u32;
+        *in_len = st.last_sample[channel_index as usize];
     }
     *out_len = out_sample as u32;
     st.last_sample[channel_index as usize] -= *in_len;
@@ -1268,7 +1268,7 @@ fn speex_resampler_magic<'a, 'b>(
         st,
         channel_index,
         &mut tmp_in_len,
-        *out,
+        out,
         &mut out_len,
     );
     st.magic_samples[channel_idx] -= tmp_in_len;
@@ -1282,7 +1282,7 @@ fn speex_resampler_magic<'a, 'b>(
             .for_each(|(x, &y)| *x = y);
     }
     let value: &'b mut [f32] = mem::take(out);
-    *out = &mut value[(out_len * st.out_stride as u32) as usize..];
+    *out = &mut value[(out_len * st.out_stride) as usize..];
     out_len
 }
 

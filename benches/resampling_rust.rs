@@ -32,14 +32,14 @@ fn resample_rs() {
             .process_float(0, &fin[off..off + in_len], &mut fout[..out_len])
             .unwrap();
 
-        off += in_len as usize;
+        off += in_len;
         avail += INBLOCK as isize - in_len as isize;
 
         if off >= INBLOCK {
             off -= INBLOCK;
         }
 
-        data.push(fout[..out_len as usize].to_vec());
+        data.push(fout[..out_len].to_vec());
 
         rate += 5000;
         if rate > 128000 {

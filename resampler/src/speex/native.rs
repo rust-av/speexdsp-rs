@@ -24,7 +24,7 @@ pub fn interpolate_step_single(
 ) {
     let mut accum: [f32; 4] = [0.; 4];
     in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
-        let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
+        let idx = (2 + (j + 1) * oversample) - offset;
         accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
             |(v, &s)| {
                 *v += curr_in * s;
@@ -33,7 +33,7 @@ pub fn interpolate_step_single(
     });
     let mut interp: [f32; 4] = [0.; 4];
     cubic_coef(frac, &mut interp);
-    out_slice[(out_stride * out_sample) as usize] = interp
+    out_slice[(out_stride * out_sample)] = interp
         .iter()
         .zip(accum.iter())
         .map(|(&x, &y)| x * y)
@@ -55,7 +55,7 @@ pub fn interpolate_step_double(
 ) {
     let mut accum: [f64; 4] = [0.0; 4];
     in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
-        let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
+        let idx = (2 + (j + 1) * oversample) - offset;
         accum.iter_mut().zip(sinc_table.iter().skip(idx)).for_each(
             |(v, &s)| {
                 *v += (curr_in * s) as f64;
@@ -64,7 +64,7 @@ pub fn interpolate_step_double(
     });
     let mut interp: [f32; 4] = [0.; 4];
     cubic_coef(frac, &mut interp);
-    out_slice[(out_stride * out_sample) as usize] = interp
+    out_slice[(out_stride * out_sample)] = interp
         .iter()
         .zip(accum.iter())
         .map(|(&x, &y)| x * y as f32)
@@ -83,10 +83,10 @@ pub fn direct_step_single(
     let mut sum: f32 = 0.0;
     let mut j = 0;
     while j < n {
-        sum += sinc_table[j as usize] * in_slice[j as usize];
+        sum += sinc_table[j] * in_slice[j];
         j += 1
     }
-    out_slice[(out_stride * out_sample) as usize] = sum;
+    out_slice[(out_stride * out_sample)] = sum;
 }
 
 #[inline(always)]
@@ -102,20 +102,13 @@ pub fn direct_step_double(
     let mut j = 0;
 
     while j < n {
-        accum[0usize] +=
-            f64::from(sinc_table[j as usize] * in_slice[j as usize]);
-        accum[1usize] += f64::from(
-            sinc_table[(j + 1) as usize] * in_slice[(j + 1) as usize],
-        );
-        accum[2usize] += f64::from(
-            sinc_table[(j + 2) as usize] * in_slice[(j + 2) as usize],
-        );
-        accum[3usize] += f64::from(
-            sinc_table[(j + 3) as usize] * in_slice[(j + 3) as usize],
-        );
+        accum[0usize] += f64::from(sinc_table[j] * in_slice[j]);
+        accum[1usize] += f64::from(sinc_table[(j + 1)] * in_slice[(j + 1)]);
+        accum[2usize] += f64::from(sinc_table[(j + 2)] * in_slice[(j + 2)]);
+        accum[3usize] += f64::from(sinc_table[(j + 3)] * in_slice[(j + 3)]);
         j += 4
     }
     let sum: f64 =
         accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
-    out_slice[(out_stride * out_sample) as usize] = sum as f32;
+    out_slice[(out_stride * out_sample)] = sum as f32;
 }
