@@ -1203,9 +1203,9 @@ fn resampler_basic_direct_double(
 fn _muldiv(result: &mut u32, value: u32, mul: u32, div: u32) -> usize {
     let major: u32 = value / div;
     let remainder: u32 = value % div;
-    if remainder > 4294967295 / mul
-        || major > 4294967295 / mul
-        || major * mul > 4294967295 - remainder * mul / div
+    if remainder > u32::MAX / mul
+        || major > u32::MAX / mul
+        || major * mul > u32::MAX - remainder * mul / div
     {
         RESAMPLER_ERR_OVERFLOW
     } else {
