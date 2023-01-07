@@ -63,7 +63,7 @@ pub fn interpolate_step_single(
     unsafe {
         let mut accum = _mm_setzero_ps();
         in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
-            let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
+            let idx = (2 + (j + 1) * oversample) - offset;
             let sinc_ptr: *const f32 = sinc_table[idx..].as_ptr();
             accum = _mm_add_ps(
                 accum,
@@ -73,7 +73,7 @@ pub fn interpolate_step_single(
         let mut interp = _mm_setzero_ps();
         cubic_coef(frac, &mut interp);
         let v = _mm_mul_ps(interp, accum);
-        out_slice[(out_stride * out_sample) as usize] =
+        out_slice[(out_stride * out_sample)] =
             _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
     }
 }
@@ -95,7 +95,7 @@ pub fn interpolate_step_double(
         let mut accum_lo = _mm_setzero_pd();
         let mut accum_hi = _mm_setzero_pd();
         in_slice.iter().zip(0..n).for_each(|(&curr_in, j)| {
-            let idx = (2 + (j + 1) * oversample as usize) - offset as usize;
+            let idx = (2 + (j + 1) * oversample) - offset;
             let sinct_ptr: *const f32 = sinc_table[idx..].as_ptr();
             let v = _mm_mul_ps(_mm_loadu_ps(sinct_ptr), _mm_set1_ps(curr_in));
             let (v64_lo, v64_hi) = split_m128_into_m128d(v);
@@ -112,7 +112,7 @@ pub fn interpolate_step_double(
         );
         let v = _mm_mul_ps(accum32, interp);
 
-        out_slice[(out_stride * out_sample) as usize] =
+        out_slice[(out_stride * out_sample)] =
             _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
     }
 }
@@ -130,7 +130,7 @@ pub fn direct_step_single(
         let accum = sinc_table
             .chunks_exact(8)
             .zip(in_slice.chunks_exact(8))
-            .take((n as usize) / 8)
+            .take(n / 8)
             .fold(_mm_setzero_ps(), |acc, (sinct_p, iptr_p)| {
                 let sinct_v = _mm_loadu_ps(sinct_p.as_ptr());
                 let iptr_v = _mm_loadu_ps(iptr_p.as_ptr());
@@ -147,7 +147,7 @@ pub fn direct_step_single(
             _mm_add_ss(accum, _mm_shuffle_ps(accum, accum, 0b01010101));
 
         _mm_store_ss(
-            out_slice[((out_stride * out_sample) as usize)..].as_mut_ptr(),
+            out_slice[(out_stride * out_sample)..].as_mut_ptr(),
             accum,
         )
     }
@@ -167,16 +167,15 @@ pub fn direct_step_double(
         let mut j = 0;
 
         while j < n {
-            let sinct_v = _mm_loadu_ps(sinc_table[j as usize..].as_ptr());
-            let iptr_v = _mm_loadu_ps(in_slice[j as usize..].as_ptr());
+            let sinct_v = _mm_loadu_ps(sinc_table[j..].as_ptr());
+            let iptr_v = _mm_loadu_ps(in_slice[j..].as_ptr());
             let v = _mm_mul_ps(sinct_v, iptr_v);
 
             accum = _mm_add_pd(accum, _mm_cvtps_pd(v));
             j += 2;
         }
 
-        out_slice[(out_stride * out_sample) as usize] =
-            hsum_m128d(accum) as f32;
+        out_slice[(out_stride * out_sample)] = hsum_m128d(accum) as f32;
     }
 }
 

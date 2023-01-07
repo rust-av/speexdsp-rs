@@ -43,14 +43,14 @@ fn main() {
             rate, off, prev_in_len, prev_out_len, in_len, out_len
         );
 
-        off += in_len as usize;
+        off += in_len;
         avail += INBLOCK as isize - in_len as isize;
 
         if off >= INBLOCK {
             off -= INBLOCK;
         }
 
-        data.push(fout[..out_len as usize].to_vec());
+        data.push(fout[..out_len].to_vec());
 
         rate += 5000;
         if rate > 128000 {

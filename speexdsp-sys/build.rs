@@ -21,7 +21,7 @@ fn main() {
         .add_build_internal("speexdsp", |lib, version| {
             // TODO: decide how to fetch the source
             let dst = autotools::build("speexdsp");
-            system_deps::Library::from_internal_pkg_config(&dst, lib, version)
+            system_deps::Library::from_internal_pkg_config(dst, lib, version)
         })
         .probe()
         .unwrap();
@@ -46,7 +46,7 @@ fn main() {
 
         let lib = format!("{}.rs", e);
 
-        let mut file = File::create(out_path.join(&lib)).unwrap();
+        let mut file = File::create(out_path.join(lib)).unwrap();
 
         let _ = file.write(s.as_bytes());
     }
