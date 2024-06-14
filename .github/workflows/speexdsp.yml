@@ -45,7 +45,7 @@ jobs:
       uses: actions-rs/clippy-check@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all --all-targets --all-features --tests -- --verbose
+        args: --all --all-targets --all-features --tests --
 
   tests:
 
