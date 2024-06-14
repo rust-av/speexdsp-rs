@@ -73,7 +73,7 @@ pub fn interpolate_step_single(
         let mut interp = _mm_setzero_ps();
         cubic_coef(frac, &mut interp);
         let v = _mm_mul_ps(interp, accum);
-        out_slice[(out_stride * out_sample)] =
+        out_slice[out_stride * out_sample] =
             _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
     }
 }
@@ -112,7 +112,7 @@ pub fn interpolate_step_double(
         );
         let v = _mm_mul_ps(accum32, interp);
 
-        out_slice[(out_stride * out_sample)] =
+        out_slice[out_stride * out_sample] =
             _mm_cvtss_f32(_mm_hadd_ps(_mm_hadd_ps(v, v), v));
     }
 }
@@ -175,7 +175,7 @@ pub fn direct_step_double(
             j += 2;
         }
 
-        out_slice[(out_stride * out_sample)] = hsum_m128d(accum) as f32;
+        out_slice[out_stride * out_sample] = hsum_m128d(accum) as f32;
     }
 }
 

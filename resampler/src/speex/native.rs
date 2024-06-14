@@ -33,7 +33,7 @@ pub fn interpolate_step_single(
     });
     let mut interp: [f32; 4] = [0.; 4];
     cubic_coef(frac, &mut interp);
-    out_slice[(out_stride * out_sample)] = interp
+    out_slice[out_stride * out_sample] = interp
         .iter()
         .zip(accum.iter())
         .map(|(&x, &y)| x * y)
@@ -64,7 +64,7 @@ pub fn interpolate_step_double(
     });
     let mut interp: [f32; 4] = [0.; 4];
     cubic_coef(frac, &mut interp);
-    out_slice[(out_stride * out_sample)] = interp
+    out_slice[out_stride * out_sample] = interp
         .iter()
         .zip(accum.iter())
         .map(|(&x, &y)| x * y as f32)
@@ -86,7 +86,7 @@ pub fn direct_step_single(
         sum += sinc_table[j] * in_slice[j];
         j += 1
     }
-    out_slice[(out_stride * out_sample)] = sum;
+    out_slice[out_stride * out_sample] = sum;
 }
 
 #[inline(always)]
@@ -103,12 +103,12 @@ pub fn direct_step_double(
 
     while j < n {
         accum[0usize] += f64::from(sinc_table[j] * in_slice[j]);
-        accum[1usize] += f64::from(sinc_table[(j + 1)] * in_slice[(j + 1)]);
-        accum[2usize] += f64::from(sinc_table[(j + 2)] * in_slice[(j + 2)]);
-        accum[3usize] += f64::from(sinc_table[(j + 3)] * in_slice[(j + 3)]);
+        accum[1usize] += f64::from(sinc_table[j + 1] * in_slice[j + 1]);
+        accum[2usize] += f64::from(sinc_table[j + 2] * in_slice[j + 2]);
+        accum[3usize] += f64::from(sinc_table[j + 3] * in_slice[j + 3]);
         j += 4
     }
     let sum: f64 =
         accum[0usize] + accum[1usize] + accum[2usize] + accum[3usize];
-    out_slice[(out_stride * out_sample)] = sum as f32;
+    out_slice[out_stride * out_sample] = sum as f32;
 }
