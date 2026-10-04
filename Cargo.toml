@@ -17,6 +17,9 @@ license = "MIT"
 readme = "README.md"
 edition.workspace = true
 
+[package.metadata.docs.rs]
+features = ["vendored-sys"]
+
 [features]
 sys = ["speexdsp-sys"]
 vendored-sys = ["sys", "speexdsp-sys/vendored"]

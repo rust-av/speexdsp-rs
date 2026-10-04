@@ -7,25 +7,14 @@ mod sys {
     use std::fmt;
 
     #[derive(Clone, Copy, Debug)]
-    pub enum SpeexEchoConst {
-        SPEEX_ECHO_GET_FRAME_SIZE = 3,
-        SPEEX_ECHO_SET_SAMPLING_RATE = 24,
-        SPEEX_ECHO_GET_SAMPLING_RATE = 25,
-        SPEEX_ECHO_GET_IMPULSE_RESPONSE_SIZE = 27,
-        SPEEX_ECHO_GET_IMPULSE_RESPONSE = 29,
-    }
-
-    #[derive(Clone, Copy, Debug)]
     pub enum Error {
         FailedInit,
-        UnknownRequest,
     }
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let v = match self {
                 Error::FailedInit => "Failed to initialize",
-                Error::UnknownRequest => "The request is unknown",
             };
 
             write!(f, "{}", v)
@@ -34,7 +23,7 @@ mod sys {
 
     #[derive(Clone)]
     pub struct SpeexEcho {
-        st: *mut SpeexEchoState,
+        pub(crate) st: *mut SpeexEchoState,
     }
 
     impl SpeexEcho {
@@ -53,7 +42,7 @@ mod sys {
             }
         }
 
-        pub fn echo_init(
+        pub fn new_multi_channel(
             frame_size: usize,
             filter_length: usize,
             nb_mic: usize,
@@ -75,6 +64,7 @@ mod sys {
             }
         }
 
+        /// Performs echo cancellation a frame, based on the audio sent to the speaker (no delay is added to playback in this form).
         pub fn echo_cancellation(
             &mut self,
             rec: &[i16],
@@ -87,24 +77,6 @@ mod sys {
                     rec.as_ptr(),
                     play.as_ptr(),
                     out.as_mut_ptr(),
-                )
-            };
-        }
-
-        pub fn echo_cancel(
-            &mut self,
-            rec: &[i16],
-            play: &[i16],
-            out: &mut [i16],
-            yout: &mut [i32],
-        ) {
-            unsafe {
-                speex_echo_cancel(
-                    self.st,
-                    rec.as_ptr(),
-                    play.as_ptr(),
-                    out.as_mut_ptr(),
-                    yout.as_mut_ptr(),
                 )
             };
         }
@@ -123,25 +95,47 @@ mod sys {
             unsafe { speex_echo_state_reset(self.st) };
         }
 
-        pub fn echo_ctl(
-            &mut self,
-            request: SpeexEchoConst,
-            ptr: usize,
-        ) -> Result<(), Error> {
-            let ret = unsafe {
-                speex_echo_ctl(self.st, request as i32, ptr as *mut c_void)
-                    as usize
-            };
-            if ret != 0 {
-                Err(Error::UnknownRequest)
-            } else {
-                Ok(())
+        fn set_i32(&mut self, cmd: u32, val: i32) -> &mut Self {
+            let mut v = val;
+            unsafe {
+                speex_echo_ctl(
+                    self.st,
+                    cmd as std::os::raw::c_int,
+                    &mut v as *mut _ as *mut c_void,
+                );
             }
+            self
         }
 
-        pub(crate) fn get_ptr(&self) -> *mut SpeexEchoState {
-            self.st
+        fn get_i32(&mut self, cmd: u32) -> i32 {
+            let mut v: i32 = 0;
+            unsafe {
+                speex_echo_ctl(
+                    self.st,
+                    cmd as std::os::raw::c_int,
+                    &mut v as *mut _ as *mut c_void,
+                );
+            }
+            v
         }
+
+        pub fn get_frame_size(&mut self) -> i32 {
+            self.get_i32(SPEEX_ECHO_GET_FRAME_SIZE)
+        }
+
+        pub fn set_sampling_rate(&mut self, val: usize) -> &mut Self {
+            self.set_i32(SPEEX_ECHO_SET_SAMPLING_RATE, val as i32)
+        }
+
+        pub fn get_sampling_rate(&mut self) -> i32 {
+            self.get_i32(SPEEX_ECHO_GET_SAMPLING_RATE)
+        }
+
+        pub fn get_impulse_response_size(&mut self) -> i32 {
+            self.get_i32(SPEEX_ECHO_GET_IMPULSE_RESPONSE_SIZE)
+        }
+
+        // todo: SPEEX_ECHO_GET_IMPULSE_RESPONSE
     }
 
     impl Drop for SpeexEcho {
@@ -200,4 +194,4 @@ mod sys {
 }
 
 #[cfg(feature = "sys")]
-pub use self::sys::{Error, SpeexDecorr, SpeexEcho, SpeexEchoConst};
+pub use self::sys::{Error, SpeexDecorr, SpeexEcho};

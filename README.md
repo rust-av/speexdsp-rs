@@ -1,7 +1,11 @@
 # speexdsp bindings and c2rust version
 
+[![crates.io](https://img.shields.io/crates/v/speexdsp?style=flat-square&logo=rust)](https://crates.io/crates/speexdsp)
+[![docs.rs](https://img.shields.io/badge/docs.rs-speexdsp-blue?style=flat-square&logo=docs.rs)](https://docs.rs/speexdsp)
+[![crates.io](https://img.shields.io/crates/v/speexdsp-sys?style=flat-square&logo=rust)](https://crates.io/crates/speexdsp-sys)
+[![docs.rs](https://img.shields.io/badge/docs.rs-speexdsp-sys-blue?style=flat-square&logo=docs.rs)](https://docs.rs/speexdsp-sys)
 [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Actions Status](https://github.com/rust-av/speexdsp-rs/workflows/speexdsp/badge.svg)](https://github.com/rust-av/speexdsp-rs/actions)
+[![Actions Status](https://github.com/rust-av/speexdsp-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/rust-av/speexdsp-rs/actions/workflows/ci.yml)
 [![dependency status](https://deps.rs/repo/github/rust-av/speexdsp-rs/status.svg)](https://deps.rs/repo/github/rust-av/speexdsp-rs)
 [![IRC](https://img.shields.io/badge/irc-%23rust--av-blue.svg)](http://webchat.freenode.net?channels=%23rust-av&uio=d4)
 
@@ -20,7 +24,8 @@ The bindings are generated using the headers and libraries that ought to be pres
 - Make sure the `speexdsp` C headers and pkg-config files are installed.
 
 ## TODO
-- [ ] Source build speexdsp
+
+- [x] Source build speexdsp
 - [x] Simple bindings
 - [x] Safe abstraction
 - [x] Examples
@@ -31,7 +36,7 @@ The bindings are generated using the headers and libraries that ought to be pres
 Currently we have only an integration test to compare the C and the Rust implementation.
 To run it issue:
 
-``` sh
+```sh
 $ cargo test --features=sys
 ```
 

@@ -8,7 +8,6 @@ use std::io::Read;
 
 #[cfg(feature = "sys")]
 fn main() {
-    use speexdsp::preprocess::SpeexPreprocessConst::*;
     use speexdsp::preprocess::*;
 
     const NN: usize = 160;
@@ -16,15 +15,13 @@ fn main() {
     let mut buffer: [u8; NN * 2] = [0; NN * 2];
 
     let mut st = SpeexPreprocess::new(NN, 8000).unwrap();
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DENOISE, 1).unwrap();
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_AGC, 0).unwrap();
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_AGC_LEVEL, 8000)
-        .unwrap();
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB, 0).unwrap();
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB_DECAY, 0f32)
-        .unwrap();
-    st.preprocess_ctl(SPEEX_PREPROCESS_SET_DEREVERB_LEVEL, 0f32)
-        .unwrap();
+
+    st.set_denoise(true)
+        .set_agc(false)
+        .set_agc_level(8000f32)
+        .set_dereverb(false)
+        .set_dereverb_decay(0f32)
+        .set_dereverb_level(0f32);
 
     while let Ok(n) = std::io::stdin().read(&mut buffer) {
         if n == 0 {

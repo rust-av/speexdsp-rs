@@ -278,7 +278,7 @@ impl SpeexResamplerState {
         *in_len -= ilen;
         *out_len -= olen;
         let resampler = self.resampler_ptr.unwrap();
-        if resampler as usize == resampler_basic_zero as usize {
+        if resampler as usize == resampler_basic_zero as *const () as usize {
             RESAMPLER_ERR_ALLOC_FAILED
         } else {
             RESAMPLER_ERR_SUCCESS
@@ -372,7 +372,7 @@ impl SpeexResamplerState {
         *in_len -= ilen;
         *out_len -= olen;
         let resampler = self.resampler_ptr.unwrap();
-        if resampler as usize == resampler_basic_zero as usize {
+        if resampler as usize == resampler_basic_zero as *const () as usize {
             RESAMPLER_ERR_ALLOC_FAILED
         } else {
             RESAMPLER_ERR_SUCCESS
@@ -419,7 +419,7 @@ impl SpeexResamplerState {
         self.in_stride = istride_save;
         self.out_stride = ostride_save;
         let resampler = self.resampler_ptr.unwrap();
-        if resampler as usize == resampler_basic_zero as usize {
+        if resampler as usize == resampler_basic_zero as *const () as usize {
             RESAMPLER_ERR_ALLOC_FAILED
         } else {
             RESAMPLER_ERR_SUCCESS
@@ -466,7 +466,7 @@ impl SpeexResamplerState {
         self.in_stride = istride_save;
         self.out_stride = ostride_save;
         let resampler = self.resampler_ptr.unwrap();
-        if resampler as usize == resampler_basic_zero as usize {
+        if resampler as usize == resampler_basic_zero as *const () as usize {
             RESAMPLER_ERR_ALLOC_FAILED
         } else {
             RESAMPLER_ERR_SUCCESS

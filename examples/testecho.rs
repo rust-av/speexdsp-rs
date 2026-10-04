@@ -22,9 +22,7 @@ struct CliArgs {
 
 #[cfg(feature = "sys")]
 fn main() -> std::io::Result<()> {
-    use speexdsp::echo::SpeexEchoConst::*;
     use speexdsp::echo::*;
-    use speexdsp::preprocess::SpeexPreprocessConst::*;
     use speexdsp::preprocess::*;
 
     const NN: usize = 160;
@@ -46,10 +44,10 @@ fn main() -> std::io::Result<()> {
 
     let mut st = SpeexEcho::new(NN, TAIL).unwrap();
     let mut den = SpeexPreprocess::new(NN, sample_rate).unwrap();
-    st.echo_ctl(SPEEX_ECHO_SET_SAMPLING_RATE, sample_rate)
-        .unwrap();
-    den.preprocess_ctl(SPEEX_PREPROCESS_SET_ECHO_STATE, &st)
-        .unwrap();
+
+    st.set_sampling_rate(sample_rate);
+
+    den.set_echo_state(Some(&st));
 
     loop {
         let n = echo_fd.read(&mut echo_read_buf)?;

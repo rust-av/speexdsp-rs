@@ -3,7 +3,7 @@
 #[cfg(feature = "sys")]
 mod sys {
     use speexdsp_sys::jitter::*;
-    use std::ffi::c_void;
+    use std::ffi::{c_char, c_void};
     use std::fmt;
 
     const BUFFER_OK: i32 = JITTER_BUFFER_OK as i32;
@@ -89,7 +89,7 @@ mod sys {
 
         pub fn create(
             &mut self,
-            data: &mut [i8],
+            data: &mut [c_char],
             len: usize,
             timestamp: usize,
             span: usize,
@@ -131,7 +131,7 @@ mod sys {
             self.pt.user_data as usize
         }
 
-        pub fn set_data(&mut self, data: &mut [i8]) {
+        pub fn set_data(&mut self, data: &mut [c_char]) {
             self.pt.data = data.as_mut_ptr();
         }
 

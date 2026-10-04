@@ -10,8 +10,10 @@ homepage = "https://github.com/rust-av/speexdsp-rs"
 keywords = ["audio", "resampler"]
 categories = ["api-bindings"]
 edition.workspace = true
-
 exclude = ["speexdsp/doc/*", "speexdsp/html/*"]
+
+[package.metadata.docs.rs]
+features = ["vendored"]
 
 [features]
 vendored = []

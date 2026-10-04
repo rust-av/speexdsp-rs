@@ -118,6 +118,6 @@ fn main() {
 
         let mut file = File::create(dst.join(lib)).unwrap();
 
-        file.write(s.as_bytes()).unwrap();
+        file.write_all(s.as_bytes()).unwrap();
     }
 }
